@@ -1,0 +1,66 @@
+{% comment %}
+  Menú lateral deslizante. Incluilo en base.html (o en el header).
+  Se abre con el botón hamburguesa de la izquierda (#menuToggle).
+{% endcomment %}
+
+<button id="menuToggle" class="menu-toggle" aria-label="Abrir menú" aria-controls="sideMenu" aria-expanded="false">
+  <span></span><span></span><span></span>
+</button>
+
+<div id="sideMenuBackdrop" class="side-menu-backdrop" hidden></div>
+
+<aside id="sideMenu" class="side-menu" aria-hidden="true">
+  <div class="side-menu-head">
+    <span class="brand-mini">BY Josephine</span>
+    <button id="menuClose" class="menu-close" aria-label="Cerrar menú">×</button>
+  </div>
+
+  <nav class="side-menu-nav">
+    <a href="{% url 'web:index' %}">Inicio</a>
+    <a href="{% url 'web:catalog' %}">Catálogo</a>
+    <a href="{% url 'web:order_lookup' %}">Consultar pedidos</a>
+
+    {% if user.is_authenticated and user.is_staff %}
+      <div class="side-menu-section">
+        <p class="side-menu-label">Administración</p>
+        <a href="{% url 'web:admin_panel' %}">Panel admin</a>
+      </div>
+    {% endif %}
+
+    <div class="side-menu-section">
+      {% if user.is_authenticated %}
+        <a href="{% url 'web:logout' %}">Cerrar sesión</a>
+      {% else %}
+        <a href="{% url 'web:login' %}">Iniciar sesión</a>
+        <a href="{% url 'web:register' %}">Crear cuenta</a>
+      {% endif %}
+    </div>
+  </nav>
+</aside>
+
+<script>
+  (function () {
+    var toggle = document.getElementById('menuToggle');
+    var menu = document.getElementById('sideMenu');
+    var backdrop = document.getElementById('sideMenuBackdrop');
+    var close = document.getElementById('menuClose');
+    function open() {
+      menu.classList.add('is-open');
+      backdrop.hidden = false;
+      toggle.setAttribute('aria-expanded', 'true');
+      menu.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function shut() {
+      menu.classList.remove('is-open');
+      backdrop.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      menu.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    if (toggle) toggle.addEventListener('click', open);
+    if (close) close.addEventListener('click', shut);
+    if (backdrop) backdrop.addEventListener('click', shut);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') shut(); });
+  })();
+</script>

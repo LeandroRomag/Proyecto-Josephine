@@ -1,0 +1,303 @@
+<article class="product-card product-card--clickable" data-detail-url="{% url 'web:product_detail' tile.product.id %}">
+    <div class="product-card__media">
+        {% if tile.badge %}<span class="tag tag--sale">{{ tile.badge }}</span>{% endif %}
+        <img src="{{ tile.image }}" alt="{{ tile.product.name }}" loading="lazy">
+    </div>
+    <div class="product-card__body">
+        <p class="product-card__cat">{{ tile.primary_category }}</p>
+        <h3 class="product-card__name">{{ tile.product.name }}</h3>
+
+        <div class="product-card__prices">
+            {% if tile.discounted_price %}
+                <span class="price-old">${{ tile.product.price|floatformat:0 }}</span>
+                <span class="price-new">${{ tile.discounted_price|floatformat:0 }}</span>
+                {% if tile.applied_promotion %}
+                    <span class="promo-tag">
+                        {% if tile.applied_promotion.discount_type == 'percentage' %}
+                            {{ tile.applied_promotion.discount_value|floatformat:0 }}% OFF
+                        {% else %}
+                            ${{ tile.applied_promotion.discount_value|floatformat:0 }} OFF
+                        {% endif %}
+                    </span>
+                {% endif %}
+            {% else %}
+                <span class="price-new">${{ tile.product.price }}</span>
+            {% endif %}
+        </div>
+        <p class="product-card__cuotas">3 y 6 cuotas sin interés</p>
+
+        {% if tile.sizes %}
+        <div class="product-card__sizes">
+            {% for sz in tile.sizes %}
+                {% if sz.size %}
+                    <button type="button" class="chip {% if not sz.in_stock %}chip--oos{% endif %}" data-size="{{ sz.size }}" data-stock="{{ sz.stock }}">{{ sz.size }}</button>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="product-card__colors">
+            {% if tile.variant_map %}
+                {% for vm in tile.variant_map %}
+                    <span class="swatch" style="background: {{ vm.color_hex }}" title="{{ vm.color_hex|upper }}" data-color="{{ vm.color_hex }}" data-color-total="{{ vm.total }}"></span>
+                {% endfor %}
+            {% else %}
+                <span class="swatch" style="background: #f2d4cf"></span>
+                <span class="swatch" style="background: #d9c2b0"></span>
+                <span class="swatch" style="background: #3b4c63"></span>
+            {% endif %}
+        </div>
+
+        <div class="product-card__availability" aria-live="polite"></div>
+
+        <div class="product-card__controls">
+            <label class="product-card__qty-label" style="display:none">
+                Cantidad
+                <div class="product-card__qty-stepper" role="group" aria-label="Cantidad">
+                    <button type="button" class="product-card__qty-btn" data-action="decrease" aria-label="Disminuir cantidad">−</button>
+                    <span class="product-card__qty-value">1</span>
+                    <button type="button" class="product-card__qty-btn" data-action="increase" aria-label="Aumentar cantidad">+</button>
+                </div>
+                <input type="hidden" class="product-card__qty-hidden" value="1">
+            </label>
+        </div>
+
+        <script>
+        (function(){
+            var script = document.currentScript;
+            function init(){
+            try {
+                var card = script && script.parentElement;
+                if(!card) return;
+                var variants = [];
+                try { variants = JSON.parse("{{ tile.variant_map_json|escapejs }}"); } catch(e) { variants = []; }
+
+                var stockLookup = {};
+                var sizeTotals = {};
+                var colorTotals = {};
+                variants.forEach(function(v){
+                    var ch = (v.color_hex||'').toString();
+                    stockLookup[ch] = stockLookup[ch] || {};
+                    colorTotals[ch] = Number(v.total||0);
+                    v.sizes.forEach(function(s){
+                        var sz = (s.size||'').toString();
+                        var st = Number(s.stock||0);
+                        var vid = s.variant_id || null;
+                        stockLookup[ch][sz] = { stock: st, variant_id: vid };
+                        if(sz) { sizeTotals[sz] = (sizeTotals[sz]||0) + st; }
+                    });
+                });
+
+                var sizeButtons = Array.prototype.slice.call(card.querySelectorAll('.product-card__sizes .chip'));
+                var swatches = Array.prototype.slice.call(card.querySelectorAll('.product-card__colors .swatch'));
+                var availEl = card.querySelector('.product-card__availability');
+                var addBtn = card.querySelector('.btn--primary');
+                var qtyValueEl = card.querySelector('.product-card__qty-value');
+                var qtyHiddenEl = card.querySelector('.product-card__qty-hidden');
+                var variantInputEl = card.querySelector('.product-card__variant-hidden');
+                var quantityInputEl = card.querySelector('.product-card__quantity-hidden');
+                var qtyButtons = Array.prototype.slice.call(card.querySelectorAll('.product-card__qty-btn'));
+
+                var selectedColor = null;
+                var selectedSize = null;
+                var selectedVariantId = null;
+                var selectedQty = 1;
+
+                function updateAvailabilityText(text){ if(availEl) availEl.textContent = text || ''; }
+                function enableAdd(enable){ if(!addBtn) return; addBtn.disabled = !enable; if(enable) addBtn.classList.remove('btn--disabled'); else addBtn.classList.add('btn--disabled'); }
+                function syncSubmissionFields(){
+                    if(variantInputEl){ variantInputEl.value = selectedVariantId || ''; }
+                    if(quantityInputEl){ quantityInputEl.value = String(selectedQty || 1); }
+                }
+                var qtyLabel = card.querySelector('.product-card__qty-label');
+                function renderQty(){
+                    if(qtyValueEl){ qtyValueEl.textContent = String(selectedQty); }
+                    if(qtyHiddenEl){ qtyHiddenEl.value = String(selectedQty); }
+                    syncSubmissionFields();
+                }
+                function setQty(value, max){
+                    var nextValue = Number(value || 1);
+                    var cap = Number(max || 1);
+                    if(nextValue < 1) nextValue = 1;
+                    if(nextValue > cap) nextValue = cap;
+                    selectedQty = nextValue;
+                    renderQty();
+                }
+                function showQty(max, variant_id){ if(!qtyLabel) return; qtyLabel.style.display = max>0 ? 'inline-flex' : 'none'; qtyLabel.setAttribute('data-max', String(max || 1)); qtyLabel.setAttribute('data-variant-id', variant_id||''); setQty(1, max); }
+                function hideQty(){ if(!qtyLabel) return; qtyLabel.style.display='none'; qtyLabel.removeAttribute('data-max'); qtyLabel.removeAttribute('data-variant-id'); setQty(1, 1); }
+
+                function getPair(hex, sz){ if(!hex || !sz) return null; return (stockLookup[hex] && stockLookup[hex].hasOwnProperty(sz)) ? stockLookup[hex][sz] : null; }
+
+                function updateSizesForColor(hex){
+                    var lookup = stockLookup[hex] || {};
+                    sizeButtons.forEach(function(btn){
+                        var sz = btn.getAttribute('data-size');
+                        var entry = lookup.hasOwnProperty(sz) ? lookup[sz] : null;
+                        if(!entry || entry.stock<=0){ btn.classList.add('chip--oos'); btn.setAttribute('aria-disabled','true'); }
+                        else { btn.classList.remove('chip--oos'); btn.removeAttribute('aria-disabled'); }
+                    });
+                }
+
+                function updateSwatchesForSize(sz){
+                    swatches.forEach(function(sw){
+                        var hex = sw.getAttribute('data-color');
+                        var entry = (stockLookup[hex] && stockLookup[hex].hasOwnProperty(sz)) ? stockLookup[hex][sz] : null;
+                        if(!entry || entry.stock<=0){ sw.classList.add('swatch--oos'); sw.setAttribute('aria-disabled','true'); }
+                        else { sw.classList.remove('swatch--oos'); sw.removeAttribute('aria-disabled'); }
+                    });
+                }
+
+                function resetSizesAvailability(){
+                    sizeButtons.forEach(function(btn){
+                        var sz = btn.getAttribute('data-size');
+                        var total = sizeTotals[sz] || 0;
+                        if(total <= 0){ btn.classList.add('chip--oos'); btn.setAttribute('aria-disabled','true'); }
+                        else { btn.classList.remove('chip--oos'); btn.removeAttribute('aria-disabled'); }
+                    });
+                }
+
+                function resetSwatchesAvailability(){
+                    swatches.forEach(function(sw){
+                        var hex = sw.getAttribute('data-color');
+                        if((colorTotals[hex]||0) <= 0){ sw.classList.add('swatch--oos'); sw.setAttribute('aria-disabled','true'); }
+                        else { sw.classList.remove('swatch--oos'); sw.removeAttribute('aria-disabled'); }
+                    });
+                }
+
+                function clearSelectionState(){
+                    selectedColor = null;
+                    selectedSize = null;
+                    selectedVariantId = null;
+                    syncSubmissionFields();
+                    sizeButtons.forEach(function(b){ b.classList.remove('chip--active'); });
+                    swatches.forEach(function(s){ s.classList.remove('swatch--selected'); });
+                    resetSizesAvailability();
+                    resetSwatchesAvailability();
+                    updateAvailabilityText('');
+                    hideQty();
+                    enableAdd(false);
+                }
+
+                function onColorSelected(hex){
+                    if(selectedColor === hex){
+                        if(selectedSize){
+                            selectedColor = null;
+                            swatches.forEach(function(s){ s.classList.remove('swatch--selected'); });
+                            resetSizesAvailability();
+                            updateSwatchesForSize(selectedSize);
+                            var total = sizeTotals[selectedSize] || 0;
+                            updateAvailabilityText(total>0 ? ('Disponible: '+total) : 'Agotado');
+                            hideQty();
+                            selectedVariantId = null;
+                            syncSubmissionFields();
+                            enableAdd(false);
+                            return;
+                        }
+                        clearSelectionState();
+                        return;
+                    }
+                    selectedColor = hex;
+                    swatches.forEach(function(s){ s.classList.toggle('swatch--selected', s.getAttribute('data-color') === hex); });
+                    updateSizesForColor(hex);
+                    if(selectedSize){
+                        var pair = getPair(hex, selectedSize);
+                        if(pair){ updateAvailabilityText(pair.stock>0 ? ('Disponible: '+pair.stock) : 'Agotado'); enableAdd(pair.stock>0); if(pair.stock>0){ showQty(pair.stock, pair.variant_id); selectedVariantId = pair.variant_id; syncSubmissionFields(); } else { hideQty(); selectedVariantId=null; syncSubmissionFields(); } }
+                        else { updateAvailabilityText('No disponible'); enableAdd(false); hideQty(); selectedVariantId=null; }
+                    } else {
+                        var total = colorTotals[hex] || 0;
+                        updateAvailabilityText(total>0 ? ('Disponible: '+total) : 'Agotado');
+                        enableAdd(false);
+                        hideQty();
+                        selectedVariantId = null;
+                    }
+                }
+
+                function onSizeSelected(sz){
+                    if(selectedSize === sz){
+                        if(selectedColor){
+                            selectedSize = null;
+                            sizeButtons.forEach(function(b){ b.classList.remove('chip--active'); });
+                            resetSwatchesAvailability();
+                            updateSizesForColor(selectedColor);
+                            var total = colorTotals[selectedColor] || 0;
+                            updateAvailabilityText(total>0 ? ('Disponible: '+total) : 'Agotado');
+                            hideQty();
+                            selectedVariantId = null;
+                            enableAdd(false);
+                            return;
+                        }
+                        clearSelectionState();
+                        return;
+                    }
+                    selectedSize = sz;
+                    sizeButtons.forEach(function(b){ b.classList.toggle('chip--active', b.getAttribute('data-size') === sz); });
+                    updateSwatchesForSize(sz);
+                    if(selectedColor){
+                        var pair = getPair(selectedColor, sz);
+                        if(pair){ updateAvailabilityText(pair.stock>0 ? ('Disponible: '+pair.stock) : 'Agotado'); enableAdd(pair.stock>0); if(pair.stock>0){ showQty(pair.stock, pair.variant_id); selectedVariantId = pair.variant_id; syncSubmissionFields(); } else { hideQty(); selectedVariantId=null; syncSubmissionFields(); } }
+                        else { updateAvailabilityText('No disponible'); enableAdd(false); hideQty(); selectedVariantId=null; syncSubmissionFields(); }
+                    } else {
+                        var total = sizeTotals[sz] || 0;
+                        updateAvailabilityText(total>0 ? ('Disponible: '+total) : 'Agotado');
+                        enableAdd(false);
+                        hideQty();
+                        selectedVariantId = null;
+                    }
+                }
+
+                swatches.forEach(function(sw){ sw.addEventListener('click', function(event){
+                    event.preventDefault();
+                    event.stopPropagation();
+                    var hex = sw.getAttribute('data-color');
+                    onColorSelected(hex);
+                }); });
+                sizeButtons.forEach(function(btn){ btn.addEventListener('click', function(){ var sz = btn.getAttribute('data-size'); onSizeSelected(sz); }); });
+
+                qtyButtons.forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var max = Number((qtyLabel && qtyLabel.getAttribute('data-max')) || 1);
+                        var action = btn.getAttribute('data-action');
+                        if(action === 'increase') setQty(selectedQty + 1, max);
+                        if(action === 'decrease') setQty(selectedQty - 1, max);
+                        enableAdd(!!selectedVariantId && selectedQty >= 1 && selectedQty <= max);
+                    });
+                });
+
+                // initialize: mark oos where applicable
+                sizeButtons.forEach(function(btn){ var sz = btn.getAttribute('data-size'); var total = sizeTotals[sz] || 0; if(total <= 0) btn.classList.add('chip--oos'); });
+                swatches.forEach(function(sw){ var hex = sw.getAttribute('data-color'); if((colorTotals[hex]||0) <= 0) sw.classList.add('swatch--oos'); });
+                enableAdd(false);
+                renderQty();
+
+            } catch(e) { console && console.warn && console.warn(e); }
+            }
+            if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+            else init();
+        })();
+        </script>
+
+        <form class="product-card__quick-add" method="post" action="{% url 'web:product_detail' tile.product.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="variant_id" class="product-card__variant-hidden" value="">
+            <input type="hidden" name="quantity" class="product-card__quantity-hidden" value="1">
+            <button type="submit" class="btn btn--primary btn--block" disabled>Agregar al carrito</button>
+        </form>
+    </div>
+
+        <script>
+        (function(){
+            try {
+                var card = document.currentScript && document.currentScript.parentElement;
+                if(!card) return;
+                var detailUrl = card.getAttribute('data-detail-url');
+                if(!detailUrl) return;
+
+                card.addEventListener('click', function(event){
+                    var target = event.target;
+                    if(target.closest('button, a, input, select, label, form, .product-card__qty-stepper, .swatch, .product-card__colors, .product-card__quick-add')) return;
+                    window.location.href = detailUrl;
+                });
+            } catch(e) { console && console.warn && console.warn(e); }
+        })();
+        </script>
+</article>

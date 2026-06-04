@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}BY Josephine | Consultar pedidos{% endblock %}
+
+{% block content %}
+<div class="page-shell page-section">
+  <header class="page-hero compact-hero">
+    <div>
+      <p class="section-kicker">Pedidos</p>
+      <h1>Seguí tu compra por email</h1>
+      <p class="summary-note">Ingresá el correo con el que compraste y te mostramos tus órdenes, estado de pago y detalle de productos.</p>
+    </div>
+  </header>
+
+  <section class="checkout-box order-lookup-box">
+    <form method="get" class="order-lookup-form" novalidate>
+      <label class="field-label" for="{{ form.email.id_for_label }}">Correo electrónico</label>
+      <div class="order-lookup-form__row">
+        {{ form.email }}
+        <button type="submit" class="btn-primary order-lookup-submit">Buscar</button>
+      </div>
+      {% if form.email.errors %}
+        <div class="checkout-form-errors">{{ form.email.errors }}</div>
+      {% endif %}
+    </form>
+
+    {% if searched_email %}
+      <div class="order-lookup-result-head">
+        <span>Resultados para</span>
+        <strong>{{ searched_email }}</strong>
+      </div>
+
+      {% if orders %}
+        <div class="order-cards-grid">
+          {% for order in orders %}
+            <article class="order-card">
+              <div class="order-card__header">
+                <div>
+                  <p class="order-card__kicker">Pedido</p>
+                  <h3 class="order-card__title">#{{ order.id }}</h3>
+                </div>
+                <div class="order-card__badges">
+                  <span class="order-chip order-chip--status-{{ order.status }}">{{ order.get_status_display }}</span>
+                  <span class="order-chip order-chip--payment-{{ order.payment_status }}">{{ order.get_payment_status_display }}</span>
+                </div>
+              </div>
+
+              <div class="order-card__meta order-card__meta--lookup">
+                <div class="order-card__meta-item">
+                  <span>Fecha</span>
+                  <strong>{{ order.created_at|date:"d/m/Y H:i" }}</strong>
+                </div>
+                <div class="order-card__meta-item">
+                  <span>Entrega</span>
+                  <strong>{{ order.get_delivery_method_display }}</strong>
+                </div>
+                <div class="order-card__meta-item">
+                  <span>Total</span>
+                  <strong>$ {{ order.grand_total|floatformat:0 }}</strong>
+                </div>
+              </div>
+
+              <div class="order-card__items">
+                <p class="order-card__section-label">Productos</p>
+                <ul class="order-item-list">
+                  {% for item in order.orderitem_set.all %}
+                    <li class="order-item">
+                      <div class="order-item__main">
+                        <strong>{{ item.product.name }}</strong>
+                        <span>{{ item.quantity }} unidad{% if item.quantity != 1 %}es{% endif %}</span>
+                      </div>
+                      <div class="order-item__variant">
+                        {% if item.variant %}
+                          <span class="swatch" style="background: {{ item.variant.color.color_hex }};" title="{{ item.variant.color.color_hex|upper }}"></span>
+                          {% if item.resolved_variant_size %}<span>{{ item.resolved_variant_size }}</span>{% endif %}
+                        {% else %}
+                          {% if item.resolved_variant_size %}
+                            <span>{{ item.resolved_variant_size }}</span>
+                          {% else %}
+                            <span>Sin variante</span>
+                          {% endif %}
+                        {% endif %}
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+
+        {% include "partials/pagination.html" %}
+      {% else %}
+        <div class="order-lookup-empty checkout-box">
+          <h3>No encontramos pedidos para ese correo</h3>
+          <p>Verificá que esté escrito igual que en tu compra.</p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}BY Josephine | {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="page-shell page-section">
+  <a class="back-link" href="{% url 'web:catalog' %}">← Volver al catálogo</a>
+
+  <section class="detail-layout detail-layout--variant">
+    <div class="detail-gallery detail-gallery--carousel" data-gallery-carousel>
+      <div class="detail-gallery__stage">
+        <button type="button" class="detail-gallery__nav detail-gallery__nav--prev" data-action="prev" aria-label="Ver imagen anterior">‹</button>
+        <img src="{{ gallery_images.0|default:cover_image }}" alt="{{ product.name }}" class="detail-gallery__main" data-role="gallery-main">
+        <button type="button" class="detail-gallery__nav detail-gallery__nav--next" data-action="next" aria-label="Ver imagen siguiente">›</button>
+      </div>
+      <div class="detail-gallery__thumbs" aria-label="Galería de imágenes">
+        {% for image_url in gallery_images %}
+          <button type="button" class="detail-gallery__thumb {% if forloop.first %}is-active{% endif %}" data-role="gallery-thumb" data-src="{{ image_url }}" aria-label="Ver imagen {{ forloop.counter }}">
+            <img src="{{ image_url }}" alt="Miniatura {{ forloop.counter }} de {{ product.name }}">
+          </button>
+        {% endfor %}
+      </div>
+      {% if applied_promotion %}
+        <span class="product-badge detail-badge">{{ site_texts.product_badge_hot_sale|default:"HOT SALE" }}</span>
+      {% endif %}
+    </div>
+
+    <div class="detail-copy">
+      <p class="section-kicker">{% if product.categories.first %}{{ product.categories.first.name|upper }}{% else %}NEW IN{% endif %}</p>
+      <h1>{{ product.name }}</h1>
+
+      <div class="price-row detail-price-row">
+        {% if discounted_price %}
+          <span class="old-price">$ {{ original_price }}</span>
+          <strong>$ {{ discounted_price }}</strong>
+          {% if applied_promotion %}
+            <span class="promo-tag">
+              {% if applied_promotion.discount_type == 'percentage' %}
+                {{ applied_promotion.discount_value|floatformat:0 }}% OFF
+              {% else %}
+                ${{ applied_promotion.discount_value|floatformat:0 }} OFF
+              {% endif %}
+            </span>
+          {% endif %}
+        {% else %}
+          <strong>$ {{ product.price|floatformat:0 }}</strong>
+        {% endif %}
+      </div>
+
+      <p class="detail-description">{{ product.description|default:"Prenda seleccionada de la colección Josephine." }}</p>
+
+      <form class="detail-variant-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="variant_id" value="">
+        <input type="hidden" name="quantity" value="1">
+
+        <div class="detail-variant-group">
+          <div class="detail-variant-head">
+            <p class="section-kicker">Color</p>
+            <span class="detail-variant-state" data-role="color-state">Elegí un color</span>
+          </div>
+          <div class="detail-color-palette detail-color-palette--interactive" data-role="color-list">
+            {% if detail_tile.variant_map %}
+              {% for vm in detail_tile.variant_map %}
+                <button type="button" class="detail-color-item detail-color-item--selectable" data-color="{{ vm.color_hex }}" data-total="{{ vm.total }}">
+                  <span class="detail-swatch detail-swatch--lg" style="background: {{ vm.color_hex }}"></span>
+                </button>
+              {% endfor %}
+            {% else %}
+              <span class="detail-color-empty">Sin colores cargados.</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="detail-variant-group">
+          <div class="detail-variant-head">
+            <p class="section-kicker">Talle</p>
+            <span class="detail-variant-state" data-role="size-state">Elegí un talle</span>
+          </div>
+          <div class="detail-size-list" data-role="size-list">
+            {% for size in detail_tile.sizes %}
+              {% if size.size %}
+                <button type="button" class="chip detail-size-chip {% if not size.in_stock %}chip--oos{% endif %}" data-size="{{ size.size }}" data-total="{{ size.stock }}">{{ size.size }}</button>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="detail-variant-group">
+          <div class="detail-variant-head">
+            <p class="section-kicker">Cantidad</p>
+            <span class="detail-variant-state" data-role="qty-state">Seleccioná talle y color</span>
+          </div>
+          <div class="product-card__controls detail-qty-row" data-role="qty-wrap" hidden>
+            <label class="product-card__qty-label" style="display:inline-flex">
+              Cantidad
+              <div class="product-card__qty-stepper" role="group" aria-label="Cantidad">
+                <button type="button" class="product-card__qty-btn" data-action="decrease" aria-label="Disminuir cantidad">−</button>
+                <span class="product-card__qty-value">1</span>
+                <button type="button" class="product-card__qty-btn" data-action="increase" aria-label="Aumentar cantidad">+</button>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <button class="btn btn--primary btn--block detail-add-btn" type="submit" disabled>Elegí talle y color</button>
+        <p class="detail-form-error" data-role="form-error" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <section class="section-header">
+    <div>
+      <p class="section-kicker">Productos relacionados</p>
+      <h2>Completá el look</h2>
+    </div>
+  </section>
+
+  <section class="products-grid related-grid">
+    {% for related in related_products %}
+      <article class="product-card small-card">
+        <div class="product-media">
+          <a href="{% url 'web:product_detail' related.id %}"><img src="{{ related.primary_image_url|default:'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80' }}" alt="{{ related.name }}"></a>
+        </div>
+        <div class="product-meta">
+          <h3><a href="{% url 'web:product_detail' related.id %}">{{ related.name }}</a></h3>
+          <div class="price-row">
+            <strong>$ {{ related.price }}</strong>
+          </div>
+        </div>
+      </article>
+    {% empty %}
+      <article class="empty-state">
+        <h3>No hay productos relacionados todavía.</h3>
+      </article>
+    {% endfor %}
+  </section>
+</div>
+
+<script>
+(function () {
+  var gallery = document.querySelector('[data-gallery-carousel]');
+  if (!gallery) return;
+
+  var mainImage = gallery.querySelector('[data-role="gallery-main"]');
+  var thumbs = Array.prototype.slice.call(gallery.querySelectorAll('[data-role="gallery-thumb"]'));
+  var prevButton = gallery.querySelector('[data-action="prev"]');
+  var nextButton = gallery.querySelector('[data-action="next"]');
+  var activeIndex = 0;
+
+  function setActive(index) {
+    if (!thumbs.length || !mainImage) return;
+    activeIndex = (index + thumbs.length) % thumbs.length;
+    var activeThumb = thumbs[activeIndex];
+    mainImage.src = activeThumb.getAttribute('data-src');
+    thumbs.forEach(function (thumb, thumbIndex) {
+      thumb.classList.toggle('is-active', thumbIndex === activeIndex);
+    });
+  }
+
+  thumbs.forEach(function (thumb, index) {
+    thumb.addEventListener('click', function () {
+      setActive(index);
+    });
+  });
+
+  if (prevButton) {
+    prevButton.addEventListener('click', function () {
+      setActive(activeIndex - 1);
+    });
+  }
+
+  if (nextButton) {
+    nextButton.addEventListener('click', function () {
+      setActive(activeIndex + 1);
+    });
+  }
+})();
+</script>
+
+<script>
+(function(){
+  try {
+    var form = document.querySelector('.detail-variant-form');
+    if(!form) return;
+
+    var variants = [];
+    try { variants = JSON.parse("{{ detail_tile.variant_map_json|escapejs }}"); } catch(e) { variants = []; }
+
+    var colorButtons = Array.prototype.slice.call(form.querySelectorAll('[data-role="color-list"] .detail-color-item--selectable'));
+    var sizeButtons = Array.prototype.slice.call(form.querySelectorAll('[data-role="size-list"] .detail-size-chip'));
+    var colorState = form.querySelector('[data-role="color-state"]');
+    var sizeState = form.querySelector('[data-role="size-state"]');
+    var qtyState = form.querySelector('[data-role="qty-state"]');
+    var qtyWrap = form.querySelector('[data-role="qty-wrap"]');
+    var addButton = form.querySelector('.detail-add-btn');
+    var qtyValueEl = form.querySelector('.product-card__qty-value');
+    var qtyButtons = Array.prototype.slice.call(form.querySelectorAll('.product-card__qty-btn'));
+    var variantInput = form.querySelector('input[name="variant_id"]');
+    var quantityInput = form.querySelector('input[name="quantity"]');
+    var formErrorEl = form.querySelector('[data-role="form-error"]');
+
+    var stockLookup = {};
+    var colorTotals = {};
+    var sizeTotals = {};
+
+    variants.forEach(function(v){
+      var hex = (v.color_hex || '').toString();
+      stockLookup[hex] = stockLookup[hex] || {};
+      colorTotals[hex] = Number(v.total || 0);
+      v.sizes.forEach(function(s){
+        var size = (s.size || '').toString();
+        var stock = Number(s.stock || 0);
+        stockLookup[hex][size] = { stock: stock, variant_id: s.variant_id };
+        if(size){ sizeTotals[size] = (sizeTotals[size] || 0) + stock; }
+      });
+    });
+
+    var selectedColor = null;
+    var selectedSize = null;
+    var selectedVariant = null;
+    var selectedQty = 1;
+
+    function setMessage(el, text){ if(el) el.textContent = text; }
+    function setFormError(text){ if(formErrorEl) formErrorEl.textContent = text || ''; }
+    function setButtonState(enabled, text){
+      if(!addButton) return;
+      addButton.disabled = !enabled;
+      addButton.textContent = text || (enabled ? 'Agregar al carrito' : 'Elegí talle y color');
+    }
+    function renderQty(){
+      if(qtyValueEl){ qtyValueEl.textContent = String(selectedQty); }
+      if(quantityInput){ quantityInput.value = String(selectedQty); }
+    }
+    function clampQty(max){
+      if(selectedQty < 1) selectedQty = 1;
+      if(selectedQty > max) selectedQty = max;
+      renderQty();
+    }
+    function setQtyVisibility(visible, max){
+      if(qtyWrap){ qtyWrap.hidden = !visible; }
+      if(visible) {
+        clampQty(max);
+        setMessage(qtyState, 'Disponible: ' + max);
+      } else {
+        setMessage(qtyState, 'Seleccioná talle y color');
+        selectedQty = 1;
+        renderQty();
+      }
+    }
+    function refreshAvailability(){
+      if(!selectedColor && !selectedSize) {
+        setButtonState(false, 'Elegí talle y color');
+        setQtyVisibility(false, 1);
+        variantInput.value = '';
+        selectedVariant = null;
+        setFormError('');
+        return;
+      }
+
+      if(selectedColor && !selectedSize) {
+        var colorTotal = colorTotals[selectedColor] || 0;
+        setMessage(colorState, colorTotal > 0 ? ('Disponible: ' + colorTotal) : 'Agotado');
+        setMessage(sizeState, 'Elegí un talle');
+        setButtonState(false, 'Elegí talle');
+        setQtyVisibility(false, 1);
+        variantInput.value = '';
+        selectedVariant = null;
+        setFormError('');
+        return;
+      }
+
+      if(!selectedColor && selectedSize) {
+        var sizeTotal = sizeTotals[selectedSize] || 0;
+        setMessage(sizeState, sizeTotal > 0 ? ('Disponible: ' + sizeTotal) : 'Agotado');
+        setMessage(colorState, 'Elegí un color');
+        setButtonState(false, 'Elegí color');
+        setQtyVisibility(false, 1);
+        variantInput.value = '';
+        selectedVariant = null;
+        setFormError('');
+        return;
+      }
+
+      var entry = stockLookup[selectedColor] && stockLookup[selectedColor][selectedSize] ? stockLookup[selectedColor][selectedSize] : null;
+      var hasStock = !!(entry && entry.stock > 0);
+
+      setMessage(colorState, hasStock ? 'Color disponible' : 'Sin stock');
+      setMessage(sizeState, hasStock ? 'Talle disponible' : 'Sin stock');
+      setQtyVisibility(hasStock, hasStock ? entry.stock : 1);
+      setButtonState(hasStock, hasStock ? 'Agregar al carrito' : 'Sin stock');
+      if(hasStock) {
+        selectedVariant = entry.variant_id;
+        variantInput.value = entry.variant_id || '';
+        selectedQty = Math.min(selectedQty, entry.stock);
+        renderQty();
+        setMessage(qtyState, 'Disponible: ' + entry.stock);
+        setFormError('');
+      } else {
+        selectedVariant = null;
+        variantInput.value = '';
+        selectedQty = 1;
+        renderQty();
+        setFormError('');
+      }
+    }
+
+    function updateSizesForColor(hex){
+      sizeButtons.forEach(function(btn){
+        var size = btn.getAttribute('data-size');
+        var entry = stockLookup[hex] && stockLookup[hex][size] ? stockLookup[hex][size] : null;
+        if(!entry || entry.stock <= 0) btn.classList.add('chip--oos'); else btn.classList.remove('chip--oos');
+      });
+    }
+
+    function updateColorsForSize(size){
+      colorButtons.forEach(function(btn){
+        var hex = btn.getAttribute('data-color');
+        var entry = stockLookup[hex] && stockLookup[hex][size] ? stockLookup[hex][size] : null;
+        if(!entry || entry.stock <= 0) btn.classList.add('swatch--oos'); else btn.classList.remove('swatch--oos');
+      });
+    }
+
+    function resetDependentStates(){
+      sizeButtons.forEach(function(btn){
+        var size = btn.getAttribute('data-size');
+        btn.classList.remove('chip--active');
+        if((sizeTotals[size] || 0) <= 0) btn.classList.add('chip--oos'); else btn.classList.remove('chip--oos');
+      });
+      colorButtons.forEach(function(btn){
+        var hex = btn.getAttribute('data-color');
+        btn.classList.remove('detail-color-item--selected');
+        if((colorTotals[hex] || 0) <= 0) btn.classList.add('swatch--oos'); else btn.classList.remove('swatch--oos');
+      });
+    }
+
+    function onColorClick(btn){
+      var hex = btn.getAttribute('data-color');
+      if(selectedColor === hex) {
+        selectedColor = null;
+        btn.classList.remove('detail-color-item--selected');
+        resetDependentStates();
+        if(selectedSize) updateColorsForSize(selectedSize);
+        refreshAvailability();
+        return;
+      }
+      selectedColor = hex;
+      colorButtons.forEach(function(b){ b.classList.toggle('detail-color-item--selected', b === btn); });
+      updateSizesForColor(hex);
+      if(selectedSize) updateColorsForSize(selectedSize);
+      refreshAvailability();
+    }
+
+    function onSizeClick(btn){
+      var size = btn.getAttribute('data-size');
+      if(selectedSize === size) {
+        selectedSize = null;
+        btn.classList.remove('chip--active');
+        resetDependentStates();
+        if(selectedColor) updateSizesForColor(selectedColor);
+        refreshAvailability();
+        return;
+      }
+      selectedSize = size;
+      sizeButtons.forEach(function(b){ b.classList.toggle('chip--active', b === btn); });
+      updateColorsForSize(size);
+      if(selectedColor) updateSizesForColor(selectedColor);
+      refreshAvailability();
+    }
+
+    colorButtons.forEach(function(btn){ btn.addEventListener('click', function(){ onColorClick(btn); }); });
+    sizeButtons.forEach(function(btn){ btn.addEventListener('click', function(){ onSizeClick(btn); }); });
+
+    qtyButtons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if(!selectedVariant) return;
+        var max = 1;
+        var pair = stockLookup[selectedColor] && stockLookup[selectedColor][selectedSize] ? stockLookup[selectedColor][selectedSize] : null;
+        if(pair) max = pair.stock;
+        if(btn.getAttribute('data-action') === 'increase') selectedQty += 1;
+        if(btn.getAttribute('data-action') === 'decrease') selectedQty -= 1;
+        if(selectedQty < 1) selectedQty = 1;
+        if(selectedQty > max) selectedQty = max;
+        renderQty();
+      });
+    });
+
+    form.addEventListener('submit', function(event){
+      var pair = selectedColor && selectedSize && stockLookup[selectedColor] ? stockLookup[selectedColor][selectedSize] : null;
+      if(!pair || !pair.variant_id || pair.stock <= 0) {
+        event.preventDefault();
+        setFormError('Seleccioná un color y talle disponibles antes de agregar al carrito.');
+        setButtonState(false, 'Elegí talle y color');
+        return;
+      }
+
+      selectedVariant = pair.variant_id;
+      if(variantInput){ variantInput.value = pair.variant_id; }
+      if(quantityInput){ quantityInput.value = String(selectedQty); }
+      setFormError('');
+    });
+
+    setButtonState(false, 'Elegí talle y color');
+    setMessage(colorState, 'Elegí un color');
+    setMessage(sizeState, 'Elegí un talle');
+    setMessage(qtyState, 'Seleccioná talle y color');
+    renderQty();
+    resetDependentStates();
+  } catch(e) {
+    console && console.warn && console.warn(e);
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}BY Josephine — Catálogo{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero__inner container">
+        <div class="hero__text">
+            <span class="hero__eyebrow">CATÁLOGO COMPLETO</span>
+            <h1>Explorar <em>colección</em></h1>
+            <p class="hero__badges">
+                <span>Buscá por nombre</span>
+                <span>Filtrá por categoría</span>
+            </p>
+            <a href="#catalog-shop" class="btn btn--dark">Ver productos</a>
+        </div>
+        <div class="hero__media">
+            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1600&q=80" alt="Colección BY Josephine">
+            <span class="hero__sticker">ALL<br>DROP</span>
+        </div>
+    </div>
+</section>
+
+<section id="catalog-shop" class="shop container">
+    <header class="shop__head">
+        <h2>Catálogo</h2>
+        <p>Buscá por nombre, descripción o categoría y abrí cada producto para sumar al carrito.</p>
+    </header>
+
+    <form class="search-panel catalog-search" method="get">
+        <span class="catalog-search__label">Filtrar</span>
+        <input class="form-input" type="search" name="q" placeholder="Buscar productos" value="{{ search_form.q.value|default_if_none:'' }}">
+        <select class="form-input" name="category">
+            <option value="">Todas las categorías</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {% if category_id|stringformat:'s' == category.id|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn--dark catalog-search__submit" type="submit">Aplicar</button>
+    </form>
+
+    <div class="product-grid">
+        {% for tile in product_tiles %}
+            {% include "partials/product_card.html" with tile=tile %}
+        {% empty %}
+            <article class="empty-state">
+                <h3>No hay resultados.</h3>
+                <p>Probá con otro texto o categoría.</p>
+            </article>
+        {% endfor %}
+    </div>
+
+    {% include "partials/pagination.html" %}
+</section>
+
+<section class="benefits container">
+    <div><strong>Envío gratis</strong><span>En todas las compras</span></div>
+    <div><strong>3 y 6 cuotas</strong><span>Sin interés</span></div>
+    <div><strong>Cambios fáciles</strong><span>Hasta 30 días</span></div>
+    <div><strong>Atención personalizada</strong><span>Por WhatsApp</span></div>
+</section>
+{% endblock %}

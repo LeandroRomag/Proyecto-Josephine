@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Panel admin | Órdenes{% endblock %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-main admin-orders-main">
+  <a href="{% url 'web:admin_panel' %}" class="admin-back">← Volver al panel</a>
+  <p class="admin-eyebrow">Pedidos</p>
+  <h1 class="admin-title">Gestión de órdenes</h1>
+  <p class="admin-orders-intro">
+    Las órdenes pendientes no se pueden mover desde este tablero. Desde Confirmado en adelante podés avanzar o retroceder un solo estado.
+  </p>
+
+  <section class="admin-orders-overview">
+    {% for section in status_sections %}
+      <article class="admin-orders-overview__stat admin-orders-overview__stat--{{ section.status }}">
+        <span class="admin-orders-overview__label">{{ section.meta.title }}</span>
+        <strong>{{ section.count }}</strong>
+        <span>{{ section.meta.subtitle }}</span>
+      </article>
+    {% endfor %}
+  </section>
+
+  <section class="admin-orders-filterbar" aria-label="Filtrar por estado">
+    <span class="admin-orders-filterbar__label">Ver estado</span>
+    <form method="get" class="admin-orders-filterbar__search" aria-label="Buscar orden por número">
+      <input type="hidden" name="status" value="{{ selected_status }}">
+      <input type="text" name="order_number" value="{{ order_number_query }}" placeholder="Nro. de orden (ej. 145)" inputmode="numeric">
+      <button type="submit">Buscar</button>
+    </form>
+    <div class="admin-orders-filterbar__list" role="tablist">
+      {% for filter in status_filters %}
+        <a
+          href="?status={{ filter.value }}{% if order_number_query %}&order_number={{ order_number_query }}{% endif %}"
+          class="admin-orders-filterbar__pill {% if selected_status == filter.value %}is-active{% endif %}"
+          role="tab"
+          aria-selected="{% if selected_status == filter.value %}true{% else %}false{% endif %}"
+        >
+          <strong>{{ filter.meta.title }}</strong>
+          <span>{{ filter.count }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if selected_section %}
+    <section class="admin-orders-section admin-orders-section--{{ selected_section.status }}">
+      <header class="admin-orders-section__head">
+        <div class="admin-orders-section__heading">
+          <span class="admin-orders-section__kicker">{{ selected_section.meta.title }}</span>
+          <h2>Órdenes</h2>
+        </div>
+        <div class="admin-orders-section__meta">
+          <span class="admin-orders-section__count">{{ selected_section.count }} pedidos</span>
+          <span class="admin-orders-section__subtitle">{{ selected_section.meta.subtitle }}</span>
+        </div>
+      </header>
+
+      <div class="admin-orders-feed">
+        {% for item in selected_section.orders %}
+          {% with order=item.order %}
+            <article class="admin-order-card admin-order-card--{{ selected_section.status }}">
+              <div class="admin-order-card__top">
+                <div class="admin-order-card__identity">
+                  <p class="admin-order-card__number">#{{ order.id }}</p>
+                  <p class="admin-order-card__meta">
+                    {{ order.created_at|date:"d/m/Y H:i" }}
+                    {% if order.user %}<br>{{ order.user.email }}{% elif order.customer_email %}<br>{{ order.customer_email }}{% endif %}
+                  </p>
+                  {% if order.phone %}
+                    <p class="admin-order-card__meta admin-order-card__meta--phone">{{ order.phone }}</p>
+                  {% endif %}
+                </div>
+                <div class="admin-order-card__badges">
+                  <span class="admin-order-chip">{{ order.get_payment_status_display }}</span>
+                  <span class="admin-order-chip admin-order-chip--soft">{{ order.get_delivery_method_display }}</span>
+                </div>
+              </div>
+
+              <div class="admin-order-card__body">
+                <div class="admin-order-card__summary">
+                  <div>
+                    <span class="admin-order-card__summary-label">Total</span>
+                    <strong>$ {{ order.grand_total|floatformat:0 }}</strong>
+                  </div>
+                  <span>{{ order.status|capfirst }}</span>
+                </div>
+
+                <ul class="admin-order-items">
+                  {% for order_item in order.orderitem_set.all %}
+                    <li>
+                      <div class="admin-order-item__main">
+                        <span class="admin-order-item__qty">{{ order_item.quantity }} x</span>
+                        <strong class="admin-order-item__name">{{ order_item.product.name }}</strong>
+                      </div>
+                      <div class="admin-order-item__variant">
+                        {% if order_item.variant %}
+                          <span class="admin-order-item__swatch" style="background: {{ order_item.variant.color.color_hex }};" title="{{ order_item.variant.color.color_hex|upper }}"></span>
+                        {% endif %}
+                        {% if order_item.resolved_variant_size %}
+                          <span class="admin-order-item__size">{{ order_item.resolved_variant_size }}</span>
+                        {% elif not order_item.variant %}
+                          <span class="admin-order-item__empty">Sin variante</span>
+                        {% endif %}
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+
+              {% if item.transition_buttons %}
+                <div class="admin-order-card__actions">
+                  {% for button in item.transition_buttons %}
+                    <form method="post" action="{% url 'web:admin_orders' %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="status" value="{{ selected_status }}">
+                      <input type="hidden" name="order_number" value="{{ order_number_query }}">
+                      <input type="hidden" name="page" value="{{ page_obj.number }}">
+                      <input type="hidden" name="order_id" value="{{ order.id }}">
+                      <input type="hidden" name="target_status" value="{{ button.target }}">
+                      <button type="submit" class="admin-order-action admin-order-action--{{ button.direction }}">
+                        {{ button.label }}
+                      </button>
+                    </form>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="admin-order-card__actions admin-order-card__actions--locked">
+                  <span>Sin acciones disponibles</span>
+                </div>
+              {% endif %}
+            </article>
+          {% endwith %}
+        {% empty %}
+          <div class="admin-empty-state">No hay órdenes en este estado.</div>
+        {% endfor %}
+      </div>
+
+      {% include "partials/pagination.html" %}
+    </section>
+  {% endif %}
+</main>
+{% endblock %}

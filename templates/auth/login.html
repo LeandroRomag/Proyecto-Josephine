@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar sesión — BY Josephine{% endblock %}
+
+{% block content %}
+<main class="auth-main">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <a href="{% url 'web:index' %}" class="brand-logo" aria-label="Ir al inicio">BY <span>Josephine</span></a>
+      <p class="auth-eyebrow">Bienvenida de vuelta</p>
+    </div>
+
+    <form method="post" action="{% url 'web:login' %}" class="auth-form">
+      {% csrf_token %}
+
+      {% if form.errors %}
+        <div class="auth-alert">Revisá tus credenciales e intentá nuevamente.</div>
+      {% endif %}
+
+      <div class="field">
+        <label for="id_email">Correo electrónico</label>
+        <input type="email" name="email" id="id_email" placeholder="hola@ejemplo.com" value="{{ form.email.value|default_if_none:'' }}" required>
+      </div>
+
+      <div class="field">
+        <label for="id_password">Contraseña</label>
+        <div class="field-with-icon">
+          <input type="password" name="password" id="id_password" placeholder="••••••••" required>
+          <button type="button" class="toggle-pass" data-target="id_password" aria-label="Mostrar contraseña">👁</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <a href="{% url 'web:password_reset_request' %}" class="link-pink">Olvidé mi contraseña</a>
+      </div>
+
+      <button type="submit" class="btn-primary">Iniciar sesión →</button>
+
+      <input type="hidden" name="next" value="{{ next }}">
+    </form>
+
+    <div class="divider"><span>o</span></div>
+
+    <p class="auth-footer-text">
+      ¿No tenés cuenta? <a href="{% url 'web:register' %}" class="link-pink">Crear cuenta</a>
+    </p>
+  </div>
+</main>
+
+<script>
+  document.querySelectorAll('.toggle-pass').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  });
+</script>
+{% endblock %}

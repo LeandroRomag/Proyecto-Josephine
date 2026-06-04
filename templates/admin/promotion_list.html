@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Promociones — BY Josephine{% endblock %}
+{% load static %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-main">
+  <a href="{% url 'web:admin_panel' %}" class="admin-back">← Volver al panel</a>
+  <div class="admin-list-head">
+    <div>
+      <p class="admin-eyebrow">Admin</p>
+      <h1 class="admin-title">Promociones</h1>
+    </div>
+    <a href="{% url 'web:admin_promotion_new' %}" class="btn-secondary">Nueva promoción</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="admin-alert">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="get" class="admin-filters">
+    <input class="form-input" type="search" name="q" placeholder="Buscar promoción" value="{{ query }}">
+    <select class="form-input" name="status">
+      <option value="all" {% if status == 'all' %}selected{% endif %}>Todas</option>
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Activas</option>
+      <option value="deleted" {% if status == 'deleted' %}selected{% endif %}>Eliminadas</option>
+    </select>
+    <div></div>
+    <button class="btn-primary" type="submit">Filtrar</button>
+  </form>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Promoción</th>
+        <th>Fechas</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for promotion in promotions %}
+        <tr>
+          <td>
+            <strong>{{ promotion.name }}</strong>
+            <div class="relationship-note">{{ promotion.code|default:'Sin código' }}</div>
+          </td>
+          <td>
+            <div class="relationship-note">{{ promotion.start_date|date:'d/m/Y H:i' }}</div>
+            <div class="relationship-note">{{ promotion.end_date|date:'d/m/Y H:i'|default:'Sin fin' }}</div>
+          </td>
+          <td>
+            <span class="state-pill {% if promotion.is_deleted %}is-deleted{% endif %}">{% if promotion.is_deleted %}Eliminada{% else %}{% if promotion.is_active %}Activa{% else %}Inactiva{% endif %}{% endif %}</span>
+          </td>
+          <td>
+            <div class="admin-table-actions">
+              <a class="admin-mini-btn admin-mini-btn--muted" href="{% url 'web:admin_promotion_edit' promotion.id %}">Modificar</a>
+              <form method="post" action="{% url 'web:admin_promotion_delete' promotion.id %}">
+                {% csrf_token %}
+                <button type="submit" class="admin-mini-btn admin-mini-btn--danger">Eliminar</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4">No hay promociones para mostrar.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock %}

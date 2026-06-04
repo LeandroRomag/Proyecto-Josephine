@@ -1,0 +1,37 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: josephine-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-josephine_db}
+      MYSQL_USER: ${MYSQL_USER:-josephine}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-josephine}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: josephine-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,web
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:

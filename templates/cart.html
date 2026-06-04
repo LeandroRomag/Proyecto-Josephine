@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}BY Josephine — Carrito{% endblock %}
+
+{% block content %}
+<section class="cart-page container">
+    <header class="cart-page__head">
+        <div>
+            <span class="hero__eyebrow">Tu carrito</span>
+            <h1>Carrito</h1>
+        </div>
+        <a href="{% url 'web:catalog' %}" class="btn btn--dark">Seguir comprando</a>
+    </header>
+
+    <div class="cart-layout">
+        <section class="cart-list">
+            {% for item in cart_items %}
+            <article class="cart-item">
+                <div class="cart-item__image">
+                    <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80{% endif %}" alt="{{ item.product.name }}">
+                </div>
+
+                <div class="cart-item__copy">
+                    <h3>{{ item.product.name }}</h3>
+                    {% if item.variant %}
+                    <div class="cart-item__meta cart-item__meta--variant">
+                        <span class="cart-item__meta-item">talle: {{ item.variant.size }}</span>
+                        {% if item.variant.color %}
+                        <span class="cart-item__meta-sep">·</span>
+                        <span class="cart-item__meta-item cart-item__meta-item--color">
+                            {% if item.variant.color.color_hex %}<i class="cart-item__color-swatch" style="background: {{ item.variant.color.color_hex }}"></i>{% endif %}
+                            color: {{ item.variant.color.display_name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    <p class="cart-item__price">${{ item.product.price|floatformat:0 }}</p>
+                </div>
+
+                <div class="cart-item__controls">
+                    <form method="post" action="{% url 'web:cart' %}" class="cart-qty">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                        <input type="hidden" name="variant_id" value="{% if item.variant %}{{ item.variant.id }}{% endif %}">
+                        <button type="submit" name="quantity" value="{{ item.quantity|add:'-1' }}" {% if item.quantity <= 1 %}disabled{% endif %} aria-label="Disminuir cantidad">−</button>
+                        <input type="number" min="1" value="{{ item.quantity }}" readonly>
+                        <button type="submit" name="quantity" value="{{ item.quantity|add:'1' }}" {% if item.quantity >= item.available_stock %}disabled{% endif %} aria-label="Aumentar cantidad">+</button>
+                    </form>
+                    <form method="post" action="{% url 'web:cart' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove">
+                        <input type="hidden" name="product_id" value="{{ item.product.id }}">
+                        <input type="hidden" name="variant_id" value="{% if item.variant %}{{ item.variant.id }}{% endif %}">
+                        <button type="submit" class="cart-remove" aria-label="Eliminar producto">Eliminar</button>
+                    </form>
+                </div>
+            </article>
+            {% empty %}
+            <article class="cart-empty">
+                <h3>El carrito está vacío.</h3>
+                <p>Agregá productos desde el catálogo para empezar a comprar.</p>
+            </article>
+            {% endfor %}
+        </section>
+
+        <aside class="cart-summary">
+            <h2>Resumen</h2>
+            <div class="cart-summary__row">
+                <span>Subtotal</span>
+                <strong>${{ subtotal|floatformat:0 }}</strong>
+            </div>
+            {% if discount_amount and discount_amount > 0 %}
+            <div class="cart-summary__row">
+                <span>Descuento</span>
+                <strong>- ${{ discount_amount|floatformat:0 }}</strong>
+            </div>
+            {% endif %}
+            <div class="cart-summary__row">
+                <span>Envío</span>
+                <strong>Se calcula en checkout</strong>
+            </div>
+            <div class="cart-summary__total">
+                <span>Total</span>
+                <strong>${{ discounted_total|floatformat:0 }}</strong>
+            </div>
+            <form method="post" action="{% url 'web:cart' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="clear">
+                <button class="btn btn--primary btn--block" type="submit">Vaciar carrito</button>
+            </form>
+            <a class="btn btn--dark btn--block cart-summary__checkout" href="{% url 'web:checkout' %}">Iniciar compra</a>
+        </aside>
+    </div>
+</section>
+{% endblock %}

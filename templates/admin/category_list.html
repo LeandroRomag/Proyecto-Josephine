@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Categorías — BY Josephine{% endblock %}
+{% load static %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-main">
+  <a href="{% url 'web:admin_panel' %}" class="admin-back">← Volver al panel</a>
+  <div class="admin-list-head">
+    <div>
+      <p class="admin-eyebrow">Admin</p>
+      <h1 class="admin-title">Categorías</h1>
+    </div>
+    <a href="{% url 'web:admin_category_new' %}" class="btn-secondary">Nueva categoría</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="admin-alert">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="get" class="admin-filters">
+    <input class="form-input" type="search" name="q" placeholder="Buscar categoría" value="{{ query }}">
+    <select class="form-input" name="status">
+      <option value="all" {% if status == 'all' %}selected{% endif %}>Todas</option>
+      <option value="active" {% if status == 'active' %}selected{% endif %}>Activas</option>
+      <option value="deleted" {% if status == 'deleted' %}selected{% endif %}>Eliminadas</option>
+    </select>
+    <div></div>
+    <button class="btn-primary" type="submit">Filtrar</button>
+  </form>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Categoría</th>
+        <th>Productos activos</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for category in categories %}
+        <tr>
+          <td><strong>{{ category.name }}</strong></td>
+          <td>{{ category.product_set.count }}</td>
+          <td>
+            <span class="state-pill {% if category.is_deleted %}is-deleted{% endif %}">{% if category.is_deleted %}Eliminada{% else %}Activa{% endif %}</span>
+          </td>
+          <td>
+            <div class="admin-table-actions">
+              <a class="admin-mini-btn admin-mini-btn--muted" href="{% url 'web:admin_category_edit' category.id %}">Modificar</a>
+              <form method="post" action="{% url 'web:admin_category_delete' category.id %}">
+                {% csrf_token %}
+                <button type="submit" class="admin-mini-btn admin-mini-btn--danger">Eliminar</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4">No hay categorías para mostrar.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock %}

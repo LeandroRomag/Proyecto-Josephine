@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}Editar categoría{% else %}Crear categoría{% endif %} — BY Josephine{% endblock %}
+
+{% load static %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-main admin-form-main">
+  <a href="{% url 'web:admin_panel' %}" class="admin-back">← Volver al panel</a>
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">{% if edit_mode %}Editar categoría{% else %}Crear categoría{% endif %}</h1>
+
+  {% if saved %}
+    <div class="admin-alert">✓ Categoría guardada correctamente.</div>
+  {% endif %}
+
+  <form method="post" class="admin-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="field">
+      <label for="{{ form.name.id_for_label }}">Nombre</label>
+      {{ form.name }}
+      {{ form.name.errors }}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">{% if edit_mode %}Guardar cambios{% else %}Guardar categoría{% endif %}</button>
+    </div>
+  </form>
+</main>
+
+<script>
+  // Auto-slug a partir del nombre
+  (function () {
+    var name = document.getElementById('id_name');
+    var slug = document.getElementById('id_slug');
+    if (!name || !slug) return;
+    name.addEventListener('input', function () {
+      slug.value = name.value
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    });
+  })();
+</script>
+{% endblock %}

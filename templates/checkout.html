@@ -1,0 +1,887 @@
+{% extends 'base.html' %}
+{% block title %}BY Josephine | Checkout{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  /* Fix: allow select dropdowns in the checkout grid to overflow their container */
+  .checkout-grid { overflow: visible; }
+  .checkout-field { overflow: visible; position: relative; }
+  /* Ensure suggestion popup sits above other content */
+  #geocode-suggestions { position: absolute; z-index: 1200; left: 0; right: 0; }
+  /* Keep province/city selects fixed width and truncate selected text */
+  .checkout-grid--location { display:flex; gap:18px; align-items:flex-start; }
+  .checkout-grid--location .checkout-field { flex: 0 0 48%; min-width: 180px; }
+  #id_province, #id_city { width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 720px) {
+    .checkout-grid--location { display:block; }
+    .checkout-grid--location .checkout-field { width:100%; flex: 1 1 100%; }
+  }
+  /* Confirmation modal styles */
+  .confirm-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:1400; }
+  .confirm-modal { width:720px; max-width:96%; background:#fff; border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,0.12); overflow:hidden; }
+  .confirm-modal__body { padding:20px; max-height:70vh; overflow:auto; }
+  .confirm-modal__footer { display:flex; gap:12px; padding:12px; border-top:1px solid #f1f1f1; justify-content:flex-end; background:#fafafa; }
+  .confirm-summary-card { border:1px solid rgba(217, 106, 140, 0.14); border-radius:20px; background:linear-gradient(180deg, #fff, #fff8fb); padding:18px; }
+  .confirm-summary-list { display:flex; flex-direction:column; gap:12px; margin-top:18px; }
+  .confirm-summary-item { display:flex; justify-content:space-between; gap:16px; padding:14px 16px; border:1px solid #ececec; border-radius:16px; background:#fff; }
+  .confirm-summary-item__copy { display:flex; flex-direction:column; gap:4px; }
+  .confirm-summary-item__copy strong { font-size:16px; color:#222; }
+  .confirm-summary-item__copy span { font-size:13px; color:#7b7b7b; }
+  .confirm-summary-item__meta { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; color:#7b7b7b; }
+  .confirm-summary-item__dot { color:#c7a0ae; font-weight:700; }
+  .confirm-summary-color { display:inline-flex; align-items:center; gap:6px; }
+  .confirm-summary-color-swatch { width:11px; height:11px; border-radius:999px; border:1px solid rgba(0,0,0,.08); display:inline-block; flex:0 0 auto; }
+  .confirm-summary-item__price { text-align:right; font-weight:700; color:#222; white-space:nowrap; }
+  .confirm-summary-totals { margin-top:18px; display:flex; flex-direction:column; gap:14px; }
+  .confirm-summary-row, .confirm-summary-total { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .confirm-summary-row { font-size:15px; color:#444; }
+  .confirm-summary-total { padding:16px 18px; border-radius:18px; background:rgba(247, 184, 205, 0.18); font-weight:700; }
+  .btn--ghost { background:transparent;border:1px solid #e6e6e6;padding:8px 12px;border-radius:8px }
+  .btn--primary-compact { background:#e64b7d;color:#fff;padding:8px 14px;border-radius:8px;border:none }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-shell page-section checkout-shell">
+  <header class="page-hero compact-hero checkout-hero">
+    <div class="checkout-hero__copy">
+      <p class="section-kicker">Checkout</p>
+      <h1>Confirmar pedido</h1>
+      <p>Revisá el envío, los datos y el pago en una sola vista. El carrito queda reservado durante la compra.</p>
+    </div>
+    <div class="checkout-hero__actions">
+      <a class="btn btn-secondary" href="{% url 'web:cart' %}">Volver al carrito</a>
+    </div>
+  </header>
+
+  {% if expires_at %}
+  <div class="checkout-timer-bar">
+    <div class="checkout-timer-content">
+      <span class="checkout-timer-label">Tiempo disponible:</span>
+      <span class="checkout-timer-display" id="timer-display">--:--</span>
+    </div>
+    <div class="checkout-timer-progress">
+      <div class="checkout-timer-fill" id="timer-fill"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="checkout-layout checkout-layout--reimagined">
+    <section class="checkout-main">
+      <div class="checkout-frame">
+        <div class="checkout-stepper">
+          <div class="checkout-stepper__item {% if step == 'delivery-choice' %}is-active{% else %}is-complete{% endif %}">
+            <span>1</span>
+            <strong>Entrega</strong>
+          </div>
+          <div class="checkout-stepper__item {% if step == 'form' %}is-active{% endif %}">
+            <span>2</span>
+            <strong>Datos y pago</strong>
+          </div>
+          <div class="checkout-stepper__item">
+            <span>3</span>
+            <strong>Confirmación</strong>
+          </div>
+        </div>
+
+        {% if step == 'delivery-choice' %}
+        <section class="checkout-card checkout-choice-card-wrap" id="delivery-choice-section">
+          <div class="checkout-panel-intro">
+            <span class="checkout-kicker">Paso 1</span>
+            <h2>Continuá con envío a domicilio</h2>
+            <p>Solo trabajamos con envío. Te llevamos el pedido al punto que marques en el mapa.</p>
+          </div>
+          <a href="{% url 'web:checkout' %}?step=form&method=shipping" class="btn btn-primary">Ir al formulario de envío</a>
+        </section>
+
+        {% elif step == 'form' %}
+        <form class="checkout-form checkout-card" method="post" id="checkout-form">
+          {% csrf_token %}
+          <input type="hidden" name="latitude" id="id_latitude" value="">
+          <input type="hidden" name="longitude" id="id_longitude" value="">
+          <input type="hidden" name="delivery_method" id="id_delivery_method" value="{{ delivery_method }}">
+
+          <div class="checkout-form__topbar">
+            <a href="{% url 'web:checkout' %}?step=delivery-choice" class="checkout-back-link">← Cambiar método de entrega</a>
+            <div class="checkout-form__mode">
+              <span>Modo actual</span>
+              <strong>Envío a domicilio</strong>
+            </div>
+          </div>
+
+          <section class="checkout-section-block">
+            <div class="checkout-panel-intro">
+              <span class="checkout-kicker">Paso 2.1</span>
+              <h2>Tus datos</h2>
+              <p>Usaremos esta información para coordinar la entrega.</p>
+            </div>
+
+            <div class="checkout-grid checkout-grid--personal">
+              <label class="checkout-field">
+                <span class="form-label">Nombre</span>
+                {{ form.customer_name }}
+                {% if form.customer_name.errors %}<span class="form-error">{{ form.customer_name.errors.0 }}</span>{% endif %}
+              </label>
+
+              <label class="checkout-field">
+                <span class="form-label">Correo electrónico</span>
+                {{ form.customer_email }}
+                {% if form.customer_email.errors %}<span class="form-error">{{ form.customer_email.errors.0 }}</span>{% endif %}
+              </label>
+
+              <label class="checkout-field">
+                <span class="form-label">Teléfono</span>
+                {{ form.phone }}
+                {% if form.phone.errors %}<span class="form-error">{{ form.phone.errors.0 }}</span>{% endif %}
+              </label>
+            </div>
+          </section>
+
+          <section class="checkout-section-block">
+            <div class="checkout-panel-intro checkout-panel-intro--tight">
+              <span class="checkout-kicker">Paso 2.2</span>
+              <h2 id="delivery-section-title">Dirección de envío</h2>
+              <p>Marcá cualquier punto del mapa y completá la dirección para coordinar la entrega.</p>
+            </div>
+
+            <div class="checkout-note-banner">
+              <strong class="checkout-note-banner__label">Importante</strong>
+              <span>El envío se coordina con el vendedor y el costo del mismo se abonará posteriormente.</span>
+            </div>
+
+            <div class="checkout-grid checkout-grid--location">
+              <label class="checkout-field">
+                <span class="form-label">Provincia</span>
+                {{ form.province }}
+                {% if form.province.errors %}<span class="form-error">{{ form.province.errors.0 }}</span>{% endif %}
+              </label>
+
+              <label class="checkout-field">
+                <span class="form-label">Ciudad</span>
+                {{ form.city }}
+                {% if form.city.errors %}<span class="form-error">{{ form.city.errors.0 }}</span>{% endif %}
+              </label>
+            </div>
+
+            <div id="shipping-section" class="checkout-grid checkout-grid--delivery">
+              <label class="checkout-field checkout-field--full">
+                <span class="form-label">Dirección completa</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  {{ form.address }}
+                  <button type="button" id="btn-geocode" class="btn btn-outline">Buscar dirección</button>
+                </div>
+                <div id="geocode-suggestions" style="margin-top:8px;display:none;">
+                  <ul id="geocode-list" style="list-style:none;padding:0;margin:0;background:#fff;border:1px solid #eee;max-height:220px;overflow:auto;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.06);"></ul>
+                </div>
+                {% if form.address.errors %}<span class="form-error">{{ form.address.errors.0 }}</span>{% endif %}
+              </label>
+
+              <div class="checkout-map-box checkout-field--full" id="map-box">
+                <div class="checkout-map-head">
+                  <div>
+                    <strong>Mapa de entrega</strong>
+                    <span>Hacé click en cualquier lugar del mapa para marcar tu punto</span>
+                  </div>
+                  <div class="checkout-map-status" id="map-status">Esperando ubicación...</div>
+                </div>
+                <div id="shipping-map" class="checkout-map"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="checkout-section-block">
+            <div class="checkout-panel-intro checkout-panel-intro--tight">
+              <span class="checkout-kicker">Paso 2.3</span>
+              <h2>Pago y promoción</h2>
+              <p>Aplicá un código promo y elegí el medio de pago.</p>
+            </div>
+
+            <div class="checkout-grid checkout-grid--payment">
+              <label class="checkout-field">
+                <span class="form-label">Método de pago</span>
+                {{ form.payment_method }}
+              </label>
+
+              <label class="checkout-field">
+                <span class="form-label">Código promo (opcional)</span>
+                {{ form.promo_code }}
+                {% if form.promo_code.errors %}<span class="form-error">{{ form.promo_code.errors.0 }}</span>{% endif %}
+              </label>
+            </div>
+          </section>
+
+          {% if form.non_field_errors %}
+          <div class="checkout-form-errors">
+            {% for error in form.non_field_errors %}
+              <p class="form-error">{{ error }}</p>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="checkout-form__submit-wrap">
+            <button class="btn btn-primary btn--block checkout-submit" type="submit" id="submit-btn">
+              Confirmar pedido y pagar
+            </button>
+            <p class="summary-note checkout-submit-note">
+              Si seleccionás Mercado Pago, vas a continuar en la plataforma de pago externa.
+            </p>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+
+    <aside class="checkout-sidebar">
+      <div class="checkout-summary-card checkout-card">
+        <div class="checkout-panel-intro checkout-panel-intro--tight">
+          <span class="checkout-kicker">Carrito</span>
+          <h2>Tu pedido</h2>
+        </div>
+
+        <div class="checkout-summary-list">
+          {% for item in cart_summary_items %}
+            <article class="checkout-summary-item">
+              <div class="checkout-summary-item__copy">
+                <strong>{{ item.name }}</strong>
+                <div class="confirm-summary-item__meta">
+                  {% if item.variant %}<span>talle: {{ item.variant }}</span>{% endif %}
+                  {% if item.color %}
+                    {% if item.variant %}<span class="confirm-summary-item__dot">·</span>{% endif %}
+                    <span class="confirm-summary-color">
+                      {% if item.color_hex %}<i class="confirm-summary-color-swatch" style="background: {{ item.color_hex }}"></i>{% endif %}
+                      color: {{ item.color }}
+                    </span>
+                  {% endif %}
+                  {% if item.quantity %}
+                    {% if item.variant or item.color %}<span class="confirm-summary-item__dot">·</span>{% endif %}
+                    <span>cantidad: {{ item.quantity }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="checkout-summary-item__price">$ {{ item.line_total|floatformat:0 }} <small style="display:block;color:#888;font-weight:400;">($ {{ item.unit_price|floatformat:0 }} c/u)</small></div>
+            </article>
+          {% endfor %}
+        </div>
+
+        <div class="checkout-summary-totals">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <strong>$ {{ total|floatformat:0 }}</strong>
+          </div>
+          <div class="summary-row" id="checkout-discount-row" {% if not discount_amount or discount_amount <= 0 %}style="display:none;"{% endif %}>
+            <span>Descuento</span>
+            <strong id="checkout-discount-value">- $ {{ discount_amount|default_if_none:0|floatformat:0 }}</strong>
+          </div>
+          <div class="summary-row">
+            <span>Envío</span>
+            <strong>A convenir</strong>
+          </div>
+          <div class="checkout-summary-total">
+            <span>Total a pagar</span>
+            <strong id="checkout-total-value">$ {{ discounted_total|default:payment_total|default:total|floatformat:0 }}</strong>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Confirmation modal markup -->
+<div id="confirm-modal-backdrop" class="confirm-modal-backdrop" role="dialog" aria-hidden="true">
+  <div class="confirm-modal" role="document" aria-modal="true">
+    <div style="padding:16px;border-bottom:1px solid #f1f1f1;">
+      <strong>Confirmá tu pedido</strong>
+    </div>
+    <div class="confirm-modal__body" id="confirm-modal-body">
+      <div class="confirm-summary-card" id="confirm-modal-summary">
+        <div class="checkout-panel-intro checkout-panel-intro--tight">
+          <span class="checkout-kicker">Resumen</span>
+          <h2>Tu pedido</h2>
+        </div>
+
+        <div class="confirm-summary-list">
+          {% for item in cart_summary_items %}
+            <article class="confirm-summary-item">
+              <div class="confirm-summary-item__copy">
+                <strong>{{ item.name }}</strong>
+                <div class="confirm-summary-item__meta">
+                  {% if item.variant %}<span>talle: {{ item.variant }}</span>{% endif %}
+                  {% if item.color %}
+                    {% if item.variant %}<span class="confirm-summary-item__dot">·</span>{% endif %}
+                    <span class="confirm-summary-color">
+                      {% if item.color_hex %}<i class="confirm-summary-color-swatch" style="background: {{ item.color_hex }}"></i>{% endif %}
+                      color: {{ item.color }}
+                    </span>
+                  {% endif %}
+                  {% if item.quantity %}
+                    {% if item.variant or item.color %}<span class="confirm-summary-item__dot">·</span>{% endif %}
+                    <span>cantidad: {{ item.quantity }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="confirm-summary-item__price">
+                $ {{ item.line_total|floatformat:0 }}
+                <small style="display:block;color:#888;font-weight:400;">($ {{ item.unit_price|floatformat:0 }} c/u)</small>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+
+        <div class="confirm-summary-totals">
+          <div class="confirm-summary-row" id="modal-discount-row" {% if not discount_amount or discount_amount <= 0 %}style="display:none;"{% endif %}>
+            <span>Descuento</span>
+            <strong id="modal-discount-value">- $ {{ discount_amount|default_if_none:0|floatformat:0 }}</strong>
+          </div>
+          <div class="confirm-summary-row">
+            <span>Envío</span>
+            <strong>A convenir</strong>
+          </div>
+          <div class="confirm-summary-total">
+            <span>Total</span>
+            <strong id="modal-total-value">$ {{ discounted_total|default:payment_total|default:total|floatformat:0 }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="confirm-modal__footer">
+      <button id="confirm-modal-cancel" type="button" class="btn--ghost">Seguir editando</button>
+      <button id="confirm-modal-confirm" type="button" class="btn--primary-compact">Confirmar y pagar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  const expiresAtStr = '{{ expires_at }}';
+  const citiesApiUrl = '/api/shipping/zones/cities/';
+  const initialCity = '{{ form.city.value|default_if_none:""|escapejs }}';
+  const mapEl = document.getElementById('shipping-map');
+  const mapBox = document.getElementById('map-box');
+  const mapStatus = document.getElementById('map-status');
+  const provinceSelect = document.getElementById('id_province');
+  const cityInput = document.getElementById('id_city');
+  const addressInput = document.getElementById('id_address');
+  const latInput = document.getElementById('id_latitude');
+  const lonInput = document.getElementById('id_longitude');
+  const promoCodeInput = document.querySelector('[name="promo_code"]');
+  const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+  const subtotalValue = parseFloat('{{ total|default:0 }}') || 0;
+  const checkoutDiscountRow = document.getElementById('checkout-discount-row');
+  const checkoutDiscountValue = document.getElementById('checkout-discount-value');
+  const checkoutTotalValue = document.getElementById('checkout-total-value');
+  const modalDiscountRow = document.getElementById('modal-discount-row');
+  const modalDiscountValue = document.getElementById('modal-discount-value');
+  const modalTotalValue = document.getElementById('modal-total-value');
+
+  let map = null;
+  let marker = null;
+  let timerInterval = null;
+  let citySuggestTimer = null;
+  let currentCities = [];
+  let pendingCity = initialCity;
+  const cityCache = new Map();
+  const allCitiesCacheUrl = '/api/shipping/zones/cities_all/';
+
+  // Attempt to prefetch all provinces' cities on page load for snappier UX.
+  (async function prefetchAllCities() {
+    try {
+      const resp = await fetch(allCitiesCacheUrl, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) return;
+      const payload = await resp.json().catch(() => ({}));
+      const provinces = payload.provinces || {};
+      // provinces keyed by label; populate cityCache by province key
+      Object.values(provinces).forEach((entry) => {
+        if (entry && entry.key) {
+          cityCache.set(entry.key, entry.cities || []);
+        }
+      });
+      if (mapStatus) {
+        mapStatus.setAttribute('data-tone', 'success');
+        mapStatus.textContent = 'Ciudades precargadas.';
+      }
+    } catch (err) {
+      // silently ignore; will fetch per-province on demand
+      console.warn('Prefetch de ciudades falló:', err);
+    }
+  })();
+  const selectionMarkerStyle = {
+    radius: 9,
+    color: '#ffffff',
+    weight: 3,
+    opacity: 1,
+    fillColor: '#d96a8c',
+    fillOpacity: 1,
+  };
+
+  // ===== TIMER =====
+  function updateTimer() {
+    if (!expiresAtStr) return;
+    
+    const expiresAt = new Date(expiresAtStr);
+    const now = new Date();
+    const diff = expiresAt - now;
+
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById('timer-display').textContent = '00:00';
+      document.getElementById('timer-fill').style.width = '0%';
+      showExpiredWarning();
+      return;
+    }
+
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    
+    document.getElementById('timer-display').textContent = display;
+    
+    // Progress bar (100% to 0%)
+    const percentRemaining = (diff / (15 * 60000)) * 100;
+    document.getElementById('timer-fill').style.width = Math.max(0, percentRemaining) + '%';
+  }
+
+  function showExpiredWarning() {
+    alert('Tu sesión de compra ha expirado. Por favor, vuelve a comenzar.');
+    window.location.href = '{% url "web:cart" %}';
+  }
+
+  function formatMoney(value) {
+    const amount = Number.isFinite(value) ? value : 0;
+    return '$ ' + Math.round(amount).toLocaleString('es-AR');
+  }
+
+  function setDiscountPreview(discountAmount, totalAfterDiscount) {
+    const hasDiscount = discountAmount > 0;
+    if (checkoutDiscountRow && checkoutDiscountValue && checkoutTotalValue) {
+      checkoutDiscountRow.style.display = hasDiscount ? '' : 'none';
+      if (hasDiscount) checkoutDiscountValue.textContent = '- ' + formatMoney(discountAmount);
+      checkoutTotalValue.textContent = formatMoney(totalAfterDiscount);
+    }
+    if (modalDiscountRow && modalDiscountValue && modalTotalValue) {
+      modalDiscountRow.style.display = hasDiscount ? '' : 'none';
+      if (hasDiscount) modalDiscountValue.textContent = '- ' + formatMoney(discountAmount);
+      modalTotalValue.textContent = formatMoney(totalAfterDiscount);
+    }
+  }
+
+  async function previewPromoDiscount() {
+    const promoCode = (promoCodeInput?.value || '').trim();
+    if (!promoCode) {
+      setDiscountPreview(0, subtotalValue);
+      return { discountAmount: 0, totalAfterDiscount: subtotalValue };
+    }
+
+    try {
+      const url = new URL('/api/promotions/apply/', window.location.origin);
+      url.searchParams.set('code', promoCode);
+      url.searchParams.set('subtotal', String(subtotalValue));
+      const response = await fetch(url.toString(), {
+        headers: { 'Accept': 'application/json' },
+      });
+      const payload = await response.json().catch(() => ({}));
+      const discountAmount = Number(payload.discount_amount || 0);
+      const totalAfterDiscount = Number(payload.total_after_discount || subtotalValue);
+      setDiscountPreview(discountAmount, totalAfterDiscount);
+      return { discountAmount, totalAfterDiscount };
+    } catch (error) {
+      console.warn('No se pudo previsualizar el descuento.', error);
+      setDiscountPreview(0, subtotalValue);
+      return { discountAmount: 0, totalAfterDiscount: subtotalValue };
+    }
+  }
+
+  function getProvinceName() {
+    if (!provinceSelect) return '';
+    return provinceSelect.options[provinceSelect.selectedIndex]?.text?.trim() || '';
+  }
+
+  function setCityOptions(items) {
+    if (!cityInput) return;
+    cityInput.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = items.length ? 'Seleccioná una ciudad' : 'No hay ciudades cargadas';
+    cityInput.appendChild(placeholder);
+
+    items.forEach((item) => {
+      const option = document.createElement('option');
+      option.value = item.name;
+      option.textContent = item.name;
+      option.dataset.lat = String(item.lat);
+      option.dataset.lng = String(item.lng);
+      cityInput.appendChild(option);
+    });
+
+    if (items.length) {
+      cityInput.disabled = false;
+      if (pendingCity && items.some((item) => item.name === pendingCity)) {
+        cityInput.value = pendingCity;
+        pendingCity = '';
+      } else {
+        cityInput.value = '';
+      }
+    } else {
+      cityInput.disabled = true;
+      cityInput.value = '';
+    }
+  }
+
+  function setLoadingCities(isLoading) {
+    if (!mapStatus) return;
+    if (isLoading) {
+      mapStatus.removeAttribute('data-tone');
+      mapStatus.innerHTML = '<span class="spinner-inline" aria-hidden="true"></span> Cargando ciudades...';
+      if (cityInput) cityInput.disabled = true;
+    } else {
+      if (!mapStatus.getAttribute('data-tone')) {
+        mapStatus.textContent = 'Seleccioná una ciudad.';
+      }
+      if (cityInput && cityInput.options.length > 1) cityInput.disabled = false;
+    }
+  }
+
+  function centerMapOnProvince() {
+    if (!map || !provinceSelect) return;
+    const selectedCity = currentCities.find((city) => city.name === cityInput?.value) || currentCities[0];
+    if (selectedCity) {
+      map.setView([selectedCity.lat, selectedCity.lng], 10, { animate: true });
+      if (mapStatus) {
+        mapStatus.setAttribute('data-tone', 'success');
+        mapStatus.textContent = 'Provincia seleccionada. Elegí la ciudad para acercar el mapa.';
+      }
+    }
+  }
+
+  async function loadCitiesForProvince() {
+    const provinceName = getProvinceName();
+    if (!provinceSelect || !provinceName) {
+      currentCities = [];
+      setCityOptions([]);
+      return;
+    }
+
+    if (cityCache.has(provinceSelect.value)) {
+      currentCities = cityCache.get(provinceSelect.value) || [];
+      setCityOptions(currentCities);
+      if (currentCities.length) {
+        centerMapOnProvince();
+      }
+      return;
+    }
+
+    currentCities = [];
+    setCityOptions([]);
+    setLoadingCities(true);
+
+    try {
+      const response = await fetch(`${citiesApiUrl}?province=${encodeURIComponent(provinceName)}`, {
+        headers: { 'Accept': 'application/json' },
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      currentCities = Array.isArray(payload.cities) ? payload.cities : [];
+      cityCache.set(provinceSelect.value, currentCities);
+      setCityOptions(currentCities);
+
+      if (currentCities.length) {
+        centerMapOnProvince();
+      } else if (mapStatus) {
+        mapStatus.setAttribute('data-tone', 'error');
+        mapStatus.textContent = 'No pudimos cargar ciudades para esa provincia.';
+      }
+    } catch (error) {
+      currentCities = [];
+      cityCache.set(provinceSelect.value, currentCities);
+      setCityOptions([]);
+      if (mapStatus) {
+        mapStatus.setAttribute('data-tone', 'error');
+        mapStatus.textContent = 'No pudimos cargar ciudades para esa provincia.';
+      }
+    } finally {
+      if (mapStatus && mapStatus.textContent === 'Cargando ciudades...') {
+        mapStatus.textContent = 'Seleccioná una ciudad.';
+      }
+    }
+  }
+
+  function centerMapOnLocation(query) {
+    const selectedName = (query || '').trim().toLowerCase();
+    if (!map || !selectedName) return;
+
+    const selectedCity = currentCities.find((city) => city.name.toLowerCase() === selectedName)
+      || currentCities.find((city) => city.name.toLowerCase().includes(selectedName));
+
+    if (selectedCity) {
+      map.setView([selectedCity.lat, selectedCity.lng], 12, { animate: true });
+      if (mapStatus) {
+        mapStatus.setAttribute('data-tone', 'success');
+        mapStatus.textContent = 'Ciudad centrada en el mapa. Ahora marcá el punto exacto.';
+      }
+    }
+  }
+
+  function clearShippingSelection(message) {
+    if (marker && map) {
+      map.removeLayer(marker);
+    }
+    marker = null;
+    if (latInput) latInput.value = '';
+    if (lonInput) lonInput.value = '';
+    if (mapStatus) {
+      mapStatus.setAttribute('data-tone', 'error');
+      mapStatus.textContent = message;
+    }
+  }
+
+  async function handleShippingPointSelection(latlng) {
+    if (mapStatus) {
+      mapStatus.setAttribute('data-tone', 'success');
+      mapStatus.textContent = 'Punto guardado. El envío se coordina con el vendedor.';
+    }
+    setSelectedShippingPoint(latlng);
+    map.setView(latlng, Math.max(map.getZoom(), 15), { animate: true });
+    fillAddressFromPoint(latlng);
+  }
+
+  async function fillAddressFromPoint(latlng) {
+    if (!addressInput) return;
+
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/reverse');
+      url.search = new URLSearchParams({
+        format: 'jsonv2',
+        lat: String(latlng.lat),
+        lon: String(latlng.lng),
+        zoom: '18',
+        addressdetails: '1',
+        'accept-language': 'es',
+      }).toString();
+
+      const response = await fetch(url.toString(), {
+        headers: { 'Accept': 'application/json' },
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      const address = payload.address || {};
+      const road = (address.road || address.pedestrian || address.residential || '').trim();
+      const number = (address.house_number || '').trim();
+      const suburb = (address.suburb || address.neighbourhood || address.city_district || '').trim();
+      const city = (address.city || address.town || address.village || '').trim();
+
+      const parts = [];
+      if (road) {
+        parts.push(number ? `${road} ${number}` : road);
+      } else if (payload.display_name) {
+        parts.push(payload.display_name.split(',').slice(0, 2).join(',').trim());
+      }
+      if (suburb) parts.push(suburb);
+      if (city && city.toLowerCase() !== suburb.toLowerCase()) parts.push(city);
+
+      if (parts.length) {
+        addressInput.value = parts.join(', ');
+        addressInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    } catch (error) {
+      console.warn('No se pudo completar la dirección automáticamente.', error);
+    }
+  }
+
+  function setSelectedShippingPoint(latlng) {
+    if (marker && map) {
+      map.removeLayer(marker);
+    }
+    if (map) {
+      map.closePopup();
+    }
+    marker = L.circleMarker(latlng, selectionMarkerStyle).addTo(map);
+    marker.bringToFront();
+    latInput.value = latlng.lat.toFixed(6);
+    lonInput.value = latlng.lng.toFixed(6);
+    if (mapStatus) {
+      mapStatus.setAttribute('data-tone', 'success');
+      mapStatus.textContent = 'Punto guardado. El envío se coordina con el vendedor.';
+    }
+  }
+
+  // ===== MAP FUNCTIONS =====
+  function initMap() {
+    if (map || !window.L || !mapEl) return;
+    
+    map = L.map(mapEl, { scrollWheelZoom: false }).setView([-34.921, -57.954], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    centerMapOnProvince();
+
+    // Click to place marker
+    map.on('click', async (e) => {
+      handleShippingPointSelection(e.latlng);
+    });
+
+    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+  }
+
+  function destroyMap() {
+    if (map) {
+      try { map.remove(); } catch (e) {}
+    }
+    map = null;
+    marker = null;
+  }
+
+  // ===== INITIALIZE =====
+  if (mapBox) {
+    initMap();
+  }
+
+  if (provinceSelect) {
+    provinceSelect.addEventListener('change', async () => {
+      pendingCity = '';
+      if (cityInput) cityInput.value = '';
+      await loadCitiesForProvince();
+    });
+  }
+
+  if (cityInput) {
+    cityInput.addEventListener('input', () => {
+      window.clearTimeout(citySuggestTimer);
+      citySuggestTimer = window.setTimeout(() => centerMapOnLocation(cityInput.value), 120);
+    });
+
+    cityInput.addEventListener('change', () => {
+      centerMapOnLocation(cityInput.value);
+    });
+  }
+
+  if (provinceSelect?.value) {
+    loadCitiesForProvince();
+  }
+
+  // ===== FORWARD GEOCODING (Buscar dirección) =====
+  const geocodeBtn = document.getElementById('btn-geocode');
+  const geocodeList = document.getElementById('geocode-list');
+  const geocodeWrap = document.getElementById('geocode-suggestions');
+
+  function renderGeocodeResults(results) {
+    if (!geocodeList || !geocodeWrap) return;
+    geocodeList.innerHTML = '';
+    if (!results || !results.length) {
+      geocodeWrap.style.display = 'none';
+      return;
+    }
+    results.forEach((r, idx) => {
+      const li = document.createElement('li');
+      li.style.padding = '10px';
+      li.style.borderBottom = '1px solid #f1f1f1';
+      li.style.cursor = 'pointer';
+      li.textContent = r.display_name;
+      li.dataset.lat = String(r.lat);
+      li.dataset.lon = String(r.lon);
+      li.addEventListener('click', () => {
+        const lat = parseFloat(li.dataset.lat);
+        const lon = parseFloat(li.dataset.lon);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          // set marker and inputs
+          setSelectedShippingPoint({ lat, lng: lon });
+          // fill address input with selected display_name
+          if (addressInput) addressInput.value = r.display_name;
+          geocodeWrap.style.display = 'none';
+        }
+      });
+      geocodeList.appendChild(li);
+    });
+    geocodeWrap.style.display = 'block';
+  }
+
+  async function forwardGeocode() {
+    if (!addressInput) return;
+    const street = addressInput.value || '';
+    const city = (provinceSelect && cityInput && cityInput.value) ? cityInput.value : '';
+    const state = provinceSelect ? provinceSelect.options[provinceSelect.selectedIndex]?.text : '';
+    if (!street && !city) return;
+    if (mapStatus) mapStatus.innerHTML = '<span class="spinner-inline" aria-hidden="true"></span> Buscando...';
+
+    try {
+      const params = new URLSearchParams({ street: street, city: city, state: state, country: 'Argentina', limit: '6' });
+      const resp = await fetch('/api/shipping/zones/geocode/?' + params.toString(), { headers: { 'Accept': 'application/json' } });
+      const payload = await resp.json().catch(() => ({}));
+      const results = Array.isArray(payload.results) ? payload.results : [];
+      renderGeocodeResults(results);
+      if (mapStatus) {
+        mapStatus.removeAttribute('data-tone');
+        mapStatus.textContent = results.length ? 'Seleccioná la coincidencia correcta.' : 'No se encontraron coincidencias.';
+      }
+    } catch (err) {
+      console.warn('Geocoding failed', err);
+      if (mapStatus) mapStatus.setAttribute('data-tone', 'error'); mapStatus.textContent = 'Error buscando dirección.';
+    }
+  }
+
+  if (geocodeBtn) {
+    geocodeBtn.addEventListener('click', forwardGeocode);
+  }
+  // Close suggestions when clicking outside
+  document.addEventListener('click', (ev) => {
+    if (!geocodeWrap) return;
+    const target = ev.target;
+    if (geocodeWrap.contains(target) || (geocodeBtn && geocodeBtn.contains(target))) return;
+    geocodeWrap.style.display = 'none';
+  });
+
+  if (expiresAtStr) {
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+  }
+
+  // ===== CLEANUP =====
+  window.addEventListener('beforeunload', () => {
+    if (timerInterval) clearInterval(timerInterval);
+    destroyMap();
+  });
+
+  // ===== CONFIRMATION MODAL =====
+  const confirmBackdrop = document.getElementById('confirm-modal-backdrop');
+  const confirmCancel = document.getElementById('confirm-modal-cancel');
+  const confirmConfirm = document.getElementById('confirm-modal-confirm');
+  const checkoutForm = document.getElementById('checkout-form');
+
+  function showConfirmModal() {
+    if (confirmBackdrop) {
+      confirmBackdrop.style.display = 'flex';
+      confirmBackdrop.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function hideConfirmModal() {
+    if (confirmBackdrop) {
+      confirmBackdrop.style.display = 'none';
+      confirmBackdrop.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+  }
+
+  if (confirmCancel) confirmCancel.addEventListener('click', hideConfirmModal);
+  if (confirmBackdrop) confirmBackdrop.addEventListener('click', (e) => { if (e.target === confirmBackdrop) hideConfirmModal(); });
+
+  if (checkoutForm) {
+    checkoutForm.addEventListener('submit', function (e) {
+      // intercept submit and show confirmation modal
+      e.preventDefault();
+      previewPromoDiscount().then(showConfirmModal);
+    });
+  }
+
+  if (confirmConfirm) {
+    confirmConfirm.addEventListener('click', function () {
+      hideConfirmModal();
+      if (checkoutForm) checkoutForm.submit();
+    });
+  }
+})();
+</script>
+{% endblock %}

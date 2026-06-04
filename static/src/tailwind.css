@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens from existing stylesheet can be re-used via CSS variables.
+   Keep custom project CSS in static/css/styles.css which will be loaded after
+   the generated Tailwind CSS so project overrides apply. */
+
+@layer utilities {
+   .bg-card { background: var(--card); }
+   .border-border { border-color: var(--border); }
+   .text-muted-foreground { color: var(--muted-foreground); }
+   .bg-primary { background: var(--primary); }
+   .text-primary-foreground { color: var(--primary-foreground); }
+   .text-pink-deep { color: var(--pink-deep); }
+   .hover\:bg-pink-deep:hover { background: var(--pink-deep); }
+   .bg-muted { background: var(--muted); }
+   /* Additional design utilities mapped to CSS variables for pixel parity */
+   .font-display { font-family: var(--font-display); }
+   .text-foreground { color: var(--foreground); }
+   .bg-background { background: var(--background); }
+   .bg-pink-soft { background: var(--pink-soft); }
+   .bg-sale { background: var(--sale); }
+   .text-sale { color: var(--sale); }
+   .text-primary { color: var(--primary); }
+   .hover\:bg-muted:hover { background: var(--muted); }
+   .bg-background\/90 { background-color: color-mix(in oklab, var(--background) 90%, transparent); }
+}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Editar textos del sitio — Panel admin{% endblock %}
+{% load static %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-main">
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">Editar textos del sitio</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ edit_formset.management_form }}
+    <div class="admin-grid admin-grid--forms">
+      {% for form in edit_formset.forms %}
+        <div class="admin-card admin-card--form">
+          <div class="admin-card-body">
+            <div class="admin-form">
+            {# include hidden fields (important: instance PK) #}
+            {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+            <div class="field">
+              <label>Clave</label>
+              <div class="form-static-key">{{ form.instance.key }}</div>
+            </div>
+            <div class="field">
+              <label>Texto</label>
+              {{ form.text }}
+            </div>
+            <div class="field">
+              <label>Descripción (solo admin)</label>
+              {{ form.description }}
+            </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:20px;">
+      <button class="btn-primary" name="save_edit" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+  <p class="muted">Solo se pueden editar las claves predefinidas. La creación/eliminación está deshabilitada.</p>
+</main>
+{% endblock %}

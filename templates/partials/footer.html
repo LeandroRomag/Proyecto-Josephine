@@ -1,0 +1,19 @@
+<footer class="site-footer">
+    <div class="container footer__grid">
+        <div>
+            <h3 class="brand brand--sm">BY <span>Josephine</span></h3>
+            <p>Ropa femenina moderna, fresca y urbana.</p>
+        </div>
+        <div>
+            <h4>Ayuda</h4>
+            <ul>
+                <li><a href="#">{{ site_texts.footer_help_envois|default:"Envíos y devoluciones" }}</a></li>
+                <li><a href="#">{{ site_texts.footer_help_talles|default:"Guía de talles" }}</a></li>
+            </ul>
+        </div>
+        
+    </div>
+    <div class="footer__bottom container">
+        <p>© {{ year|default:"2025" }} BY Josephine · Todos los derechos reservados</p>
+    </div>
+</footer>

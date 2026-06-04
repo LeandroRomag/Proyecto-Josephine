@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}Editar promoción{% else %}Crear promoción{% endif %} — BY Josephine{% endblock %}
+
+{% block content %}
+<main class="admin-main admin-form-main">
+  <a href="{% url 'web:admin_panel' %}" class="admin-back">← Volver al panel</a>
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">{% if edit_mode %}Editar promoción{% else %}Crear promoción{% endif %}</h1>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="admin-alert">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  {% if form.errors %}
+    <section class="admin-error-panel" role="alert" aria-live="polite">
+      <div class="admin-error-panel__head">
+        <span class="admin-error-panel__badge">Error</span>
+        <strong>Revisá el formulario antes de guardar</strong>
+      </div>
+      <ul class="admin-error-panel__list">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li><span class="admin-error-panel__field">{{ field|capfirst }}</span> {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <form method="post" class="admin-form">
+    {% csrf_token %}
+
+    <div class="field">
+      <label for="id_name">Nombre de la promoción</label>
+      {{ form.name }}
+        <div class="admin-field-error">{{ form.name.errors }}</div>
+      <p class="palette-help">Nombre interno para reconocer la promo en el panel.</p>
+    </div>
+
+    <div class="field-grid-3">
+      <div class="field">
+        <label for="id_code">Código promocional</label>
+        {{ form.code }}
+        <div class="admin-field-error">{{ form.code.errors }}</div>
+        <p class="palette-help">Opcional. Si luego se canjea en checkout, este será el código que ingrese el cliente.</p>
+      </div>
+      <div class="field">
+        <label for="id_discount_type">Tipo de descuento</label>
+        {{ form.discount_type }}
+        <div class="admin-field-error">{{ form.discount_type.errors }}</div>
+        <p class="palette-help">Porcentaje descuenta un % del subtotal. Monto fijo descuenta pesos exactos.</p>
+      </div>
+      <div class="field">
+        <label for="id_discount_value">Valor del descuento</label>
+        {{ form.discount_value }}
+        <div class="admin-field-error">{{ form.discount_value.errors }}</div>
+        <p class="palette-help">Si elegís porcentaje, escribí por ejemplo 10. Si es fijo, el monto en pesos.</p>
+      </div>
+    </div>
+
+    <div class="field-grid-3">
+      <div class="field">
+        <label for="id_max_discount_amount">Tope de descuento</label>
+        {{ form.max_discount_amount }}
+        <div class="admin-field-error">{{ form.max_discount_amount.errors }}</div>
+        <p class="palette-help">Solo aplica para promociones porcentuales.</p>
+      </div>
+      <div class="field">
+        <label for="id_min_order_value">Monto mínimo del carrito</label>
+        {{ form.min_order_value }}
+        <div class="admin-field-error">{{ form.min_order_value.errors }}</div>
+        <p class="palette-help">La promo solo se aplica si el carrito supera este valor.</p>
+      </div>
+      <div class="field">
+        <label for="id_max_uses">Usos máximos</label>
+        {{ form.max_uses }}
+        <div class="admin-field-error">{{ form.max_uses.errors }}</div>
+        <p class="palette-help">Dejalo vacío si querés usos ilimitados.</p>
+      </div>
+    </div>
+
+    <div class="field-grid-3">
+      <div class="field">
+        <label for="id_start_date">Inicio</label>
+        {{ form.start_date }}
+        <div class="admin-field-error">{{ form.start_date.errors }}</div>
+        <p class="palette-help">Fecha y hora desde la que empieza a funcionar.</p>
+      </div>
+      <div class="field">
+        <label for="id_end_date">Fin</label>
+        {{ form.end_date }}
+        <div class="admin-field-error">{{ form.end_date.errors }}</div>
+        <p class="palette-help">Opcional. Al llegar esta fecha la promo se desactiva.</p>
+      </div>
+      <div class="field">
+        <label class="checkbox" style="margin-top: 28px;">
+          {{ form.is_active }}
+          <span>Activa</span>
+        </label>
+        <p class="palette-help">Podés dejarla cargada pero apagada hasta usarla.</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="id_description">Descripción</label>
+      {{ form.description }}
+      <div class="admin-field-error">{{ form.description.errors }}</div>
+      <p class="palette-help">Notas internas o detalle comercial de la promoción.</p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">{% if edit_mode %}Guardar cambios{% else %}Guardar promoción{% endif %}</button>
+    </div>
+  </form>
+</main>
+{% endblock %}
+
+{% load static %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}

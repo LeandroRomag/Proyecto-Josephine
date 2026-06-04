@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}BY Josephine | Pedido{% endblock %}
+
+{% block content %}
+<div class="page-shell page-section">
+  <header class="page-hero compact-hero">
+    <div>
+      <p class="section-kicker">Pedido</p>
+      <h1>
+        {% if payment and payment.provider == 'mercado_pago' and payment.status == 'pending' %}
+          Tu orden quedó pendiente de confirmación
+        {% else %}
+          Tu orden quedó registrada
+        {% endif %}
+      </h1>
+    </div>
+    <a class="btn btn-secondary" href="{% url 'web:index' %}">Volver a la home</a>
+  </header>
+
+  <section class="checkout-layout">
+    <div class="checkout-main">
+      <div class="checkout-box">
+        <h2>Resumen de orden</h2>
+        <div class="summary-row"><span>Número</span><strong>#{{ order.id }}</strong></div>
+        <div class="summary-row"><span>Total productos</span><strong>$ {{ order.total }}</strong></div>
+        <div class="summary-row"><span>Envío</span><strong>$ {{ order.shipping_cost|floatformat:0 }}</strong></div>
+        <div class="summary-row"><span>Total final</span><strong>$ {{ order.grand_total|floatformat:0 }}</strong></div>
+      </div>
+
+      <div class="checkout-box">
+        <h2>Estado</h2>
+        <div class="summary-row"><span>Pedido</span><strong>{{ order.get_status_display }}</strong></div>
+        <div class="summary-row"><span>Pago</span><strong>{{ order.get_payment_status_display }}</strong></div>
+        {% if payment and payment.provider == 'mercado_pago' and payment.status == 'pending' %}
+          <p class="summary-note" style="margin-top: 8px;">
+            Tu pago quedó pendiente de confirmación. Esperá unos segundos y refrescá esta página o volvé más tarde.
+          </p>
+        {% endif %}
+        {% if payment.checkout_url %}
+          <a class="btn btn-primary" href="{{ payment.checkout_url }}" target="_blank" rel="noreferrer">Ir a Mercado Pago</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <aside class="cart-summary">
+      <h2>Próximo paso</h2>
+      <p class="summary-note">
+        {% if payment and payment.provider == 'mercado_pago' and payment.status == 'pending' %}
+          Estamos esperando la confirmación de Mercado Pago. Cuando llegue, la orden se marcará como pagada automáticamente.
+        {% else %}
+          Si elegiste efectivo, la orden quedó creada para gestión posterior.
+        {% endif %}
+      </p>
+      <a class="btn btn-secondary full-width" href="{% url 'web:catalog' %}">Seguir comprando</a>
+    </aside>
+  </section>
+</div>
+{% endblock %}

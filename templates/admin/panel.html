@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Panel admin — BY Josephine{% endblock %}
+{% load static %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-main">
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">Panel de administración</h1>
+
+  <div class="admin-grid">
+    <a href="{% url 'web:admin_orders' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">≋</span>
+      <h2>Gestionar órdenes</h2>
+      <p>Verificá pedidos por estado y movelos entre etapas permitidas.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+
+    <a href="{% url 'web:admin_products_list' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">▦</span>
+      <h2>Modificar / eliminar producto</h2>
+      <p>Veo el listado completo, filtro y edito o elimino productos.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+
+    <a href="{% url 'web:admin_categories_list' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">+</span>
+      <h2>Modificar / eliminar categoría</h2>
+      <p>Revisá las categorías y controlá sus relaciones antes de borrar.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+
+    <a href="{% url 'web:admin_promotions_list' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">%</span>
+      <h2>Modificar / eliminar promoción</h2>
+      <p>Gestioná descuentos, vigencia y desactivación lógica.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+  </div>
+
+  <div class="admin-list-head" style="margin-top: 36px;">
+    <div>
+      <p class="admin-eyebrow">Altas rápidas</p>
+      <h2 class="admin-title" style="font-size: 1.7rem; margin-bottom: 0;">Crear nuevos registros</h2>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    <a href="{% url 'web:admin_product_new' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">▦</span>
+      <h2>Crear producto</h2>
+      <p>Sumá una nueva prenda al catálogo.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+
+    <a href="{% url 'web:admin_category_new' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">+</span>
+      <h2>Crear categoría</h2>
+      <p>Organizá el catálogo en secciones.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+
+    <a href="{% url 'web:admin_promotion_new' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">%</span>
+      <h2>Crear promoción</h2>
+      <p>Configurá descuentos y vigencia.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+    
+    <a href="{% url 'web:admin_site_texts' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">✎</span>
+      <h2>Editar textos del sitio</h2>
+      <p>Modificar textos visibles en la home, footer y header.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+  </div>
+</main>
+{% endblock %}
