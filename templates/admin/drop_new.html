@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}Editar Drop{% else %}Crear Drop{% endif %} — BY Josephine{% endblock %}
+{% load static %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-main admin-form-main">
+  <a href="{% url 'web:admin_drops_list' %}" class="admin-back">← Volver a los drops</a>
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">{% if edit_mode %}Editar Drop{% else %}Crear Drop{% endif %}</h1>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="admin-alert">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  {% if form.errors %}
+    <section class="admin-error-panel" role="alert" aria-live="polite">
+      <div class="admin-error-panel__head">
+        <span class="admin-error-panel__badge">Error</span>
+        <strong>Revisá el formulario antes de guardar</strong>
+      </div>
+      <ul class="admin-error-panel__list">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li><span class="admin-error-panel__field">{{ field|capfirst }}</span> {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <form method="post" class="admin-form" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="field">
+      <label for="id_name">Nombre de la Colección</label>
+      {{ form.name }}
+      <div class="admin-field-error">{{ form.name.errors }}</div>
+      <p class="palette-help">Ej. "CROMO", "AUTUMN WINTER 26".</p>
+    </div>
+
+    <div class="field-grid-2">
+      <div class="field">
+        <label for="id_release_date">Fecha y hora de Lanzamiento</label>
+        {{ form.release_date }}
+        <div class="admin-field-error">{{ form.release_date.errors }}</div>
+        <p class="palette-help">Opcional. Útil para programar el reloj en la home.</p>
+      </div>
+      <div class="field">
+        <label class="checkbox" style="margin-top: 28px;">
+          {{ form.is_active }}
+          <span>Drop Activo</span>
+        </label>
+        <p class="palette-help">Si lo desmarcás, funciona como borrado lógico.</p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="id_image">Imagen de Campaña / Banner</label>
+      {{ form.image }}
+      <div class="admin-field-error">{{ form.image.errors }}</div>
+      <p class="palette-help">Foto para ilustrar la colección en el catálogo.</p>
+    </div>
+
+    <div class="field">
+      <label for="id_description">Descripción</label>
+      {{ form.description }}
+      <div class="admin-field-error">{{ form.description.errors }}</div>
+      <p class="palette-help">Concepto o texto que acompaña a la colección.</p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">{% if edit_mode %}Guardar cambios{% else %}Guardar Drop{% endif %}</button>
+    </div>
+  </form>
+</main>
+{% endblock %}

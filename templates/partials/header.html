@@ -1,7 +1,11 @@
 {% load static %}
 <header class="site-header">
-    <div class="marquee">
+<div class="marquee">
         <div class="marquee__track">
+            <span>{{ site_texts.marquee_text|default:"ENVÍOS GRATIS A TODO EL PAÍS · 3 Y 6 CUOTAS SIN INTERÉS · HASTA 70% OFF · NUEVA COLECCIÓN ·" }}</span>
+            <span>{{ site_texts.marquee_text|default:"ENVÍOS GRATIS A TODO EL PAÍS · 3 Y 6 CUOTAS SIN INTERÉS · HASTA 70% OFF · NUEVA COLECCIÓN ·" }}</span>
+        </div>
+        <div class="marquee__track" aria-hidden="true">
             <span>{{ site_texts.marquee_text|default:"ENVÍOS GRATIS A TODO EL PAÍS · 3 Y 6 CUOTAS SIN INTERÉS · HASTA 70% OFF · NUEVA COLECCIÓN ·" }}</span>
             <span>{{ site_texts.marquee_text|default:"ENVÍOS GRATIS A TODO EL PAÍS · 3 Y 6 CUOTAS SIN INTERÉS · HASTA 70% OFF · NUEVA COLECCIÓN ·" }}</span>
         </div>
@@ -42,10 +46,6 @@
 
     <nav class="header__nav container" aria-label="Categorías">
         <a href="{% url 'web:index' %}" class="{% if request.path == '/' %}active{% endif %}">INICIO</a>
-        {% for cat in global_categories %}
-            <a href="{% url 'web:catalog' %}?category={{ cat.id }}" class="{% if request.GET.category == cat.id|stringformat:"s" %}active{% endif %}">{{ cat.name }}</a>
-        {% empty %}
-            <a href="#" class="header__nav-empty">No hay categorías</a>
-        {% endfor %}
+       <a href="{% url 'web:catalog' %}">CATÁLOGO</a>
     </nav>
 </header>

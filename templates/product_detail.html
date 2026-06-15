@@ -27,12 +27,12 @@
 
     <div class="detail-copy">
       <p class="section-kicker">{% if product.categories.first %}{{ product.categories.first.name|upper }}{% else %}NEW IN{% endif %}</p>
-      <h1>{{ product.name }}</h1>
+      <h1 class="detail-title">{{ product.name }}</h1>
 
-      <div class="price-row detail-price-row">
+      <div class="detail-price-row">
         {% if discounted_price %}
           <span class="old-price">$ {{ original_price }}</span>
-          <strong>$ {{ discounted_price }}</strong>
+          <strong class="current-price">$ {{ discounted_price }}</strong>
           {% if applied_promotion %}
             <span class="promo-tag">
               {% if applied_promotion.discount_type == 'percentage' %}
@@ -43,7 +43,7 @@
             </span>
           {% endif %}
         {% else %}
-          <strong>$ {{ product.price|floatformat:0 }}</strong>
+          <strong class="current-price">$ {{ product.price|floatformat:0 }}</strong>
         {% endif %}
       </div>
 
@@ -56,14 +56,14 @@
 
         <div class="detail-variant-group">
           <div class="detail-variant-head">
-            <p class="section-kicker">Color</p>
+            <span class="variant-label">Color</span>
             <span class="detail-variant-state" data-role="color-state">Elegí un color</span>
           </div>
           <div class="detail-color-palette detail-color-palette--interactive" data-role="color-list">
             {% if detail_tile.variant_map %}
               {% for vm in detail_tile.variant_map %}
                 <button type="button" class="detail-color-item detail-color-item--selectable" data-color="{{ vm.color_hex }}" data-total="{{ vm.total }}">
-                  <span class="detail-swatch detail-swatch--lg" style="background: {{ vm.color_hex }}"></span>
+                  <span class="detail-swatch detail-swatch--lg" style="background-color: {% if '#' not in vm.color_hex %}#{% endif %}{{ vm.color_hex }};"></span>
                 </button>
               {% endfor %}
             {% else %}
@@ -74,7 +74,7 @@
 
         <div class="detail-variant-group">
           <div class="detail-variant-head">
-            <p class="section-kicker">Talle</p>
+            <span class="variant-label">Talle</span>
             <span class="detail-variant-state" data-role="size-state">Elegí un talle</span>
           </div>
           <div class="detail-size-list" data-role="size-list">
@@ -86,56 +86,24 @@
           </div>
         </div>
 
-        <div class="detail-variant-group">
-          <div class="detail-variant-head">
-            <p class="section-kicker">Cantidad</p>
-            <span class="detail-variant-state" data-role="qty-state">Seleccioná talle y color</span>
+        <div class="detail-action-row">
+          <div data-role="qty-wrap" hidden>
+            <div class="product-card__qty-stepper detail-qty-stepper">
+              <button type="button" class="product-card__qty-btn" data-action="decrease" aria-label="Disminuir cantidad">−</button>
+              <span class="product-card__qty-value">1</span>
+              <button type="button" class="product-card__qty-btn" data-action="increase" aria-label="Aumentar cantidad">+</button>
+            </div>
           </div>
-          <div class="product-card__controls detail-qty-row" data-role="qty-wrap" hidden>
-            <label class="product-card__qty-label" style="display:inline-flex">
-              Cantidad
-              <div class="product-card__qty-stepper" role="group" aria-label="Cantidad">
-                <button type="button" class="product-card__qty-btn" data-action="decrease" aria-label="Disminuir cantidad">−</button>
-                <span class="product-card__qty-value">1</span>
-                <button type="button" class="product-card__qty-btn" data-action="increase" aria-label="Aumentar cantidad">+</button>
-              </div>
-            </label>
-          </div>
+          <button class="btn btn--primary detail-add-btn" type="submit" disabled>Elegí talle y color</button>
         </div>
-
-        <button class="btn btn--primary btn--block detail-add-btn" type="submit" disabled>Elegí talle y color</button>
+        
+        <div class="detail-variant-state qty-state-msg" data-role="qty-state">Seleccioná talle y color</div>
         <p class="detail-form-error" data-role="form-error" aria-live="polite"></p>
       </form>
     </div>
   </section>
 
-  <section class="section-header">
-    <div>
-      <p class="section-kicker">Productos relacionados</p>
-      <h2>Completá el look</h2>
-    </div>
-  </section>
-
-  <section class="products-grid related-grid">
-    {% for related in related_products %}
-      <article class="product-card small-card">
-        <div class="product-media">
-          <a href="{% url 'web:product_detail' related.id %}"><img src="{{ related.primary_image_url|default:'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80' }}" alt="{{ related.name }}"></a>
-        </div>
-        <div class="product-meta">
-          <h3><a href="{% url 'web:product_detail' related.id %}">{{ related.name }}</a></h3>
-          <div class="price-row">
-            <strong>$ {{ related.price }}</strong>
-          </div>
-        </div>
-      </article>
-    {% empty %}
-      <article class="empty-state">
-        <h3>No hay productos relacionados todavía.</h3>
-      </article>
-    {% endfor %}
-  </section>
-</div>
+  
 
 <script>
 (function () {

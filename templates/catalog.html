@@ -15,10 +15,6 @@
             </p>
             <a href="#catalog-shop" class="btn btn--dark">Ver productos</a>
         </div>
-        <div class="hero__media">
-            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1600&q=80" alt="Colección BY Josephine">
-            <span class="hero__sticker">ALL<br>DROP</span>
-        </div>
     </div>
 </section>
 
@@ -31,12 +27,21 @@
     <form class="search-panel catalog-search" method="get">
         <span class="catalog-search__label">Filtrar</span>
         <input class="form-input" type="search" name="q" placeholder="Buscar productos" value="{{ search_form.q.value|default_if_none:'' }}">
+        
         <select class="form-input" name="category">
             <option value="">Todas las categorías</option>
             {% for category in categories %}
                 <option value="{{ category.id }}" {% if category_id|stringformat:'s' == category.id|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>
             {% endfor %}
         </select>
+
+        <select class="form-input" name="drop">
+            <option value="">Todos los drops</option>
+            {% for drop in drops %}
+                <option value="{{ drop.id }}" {% if drop_id|stringformat:'s' == drop.id|stringformat:'s' %}selected{% endif %}>{{ drop.name }}</option>
+            {% endfor %}
+        </select>
+
         <button class="btn btn--dark catalog-search__submit" type="submit">Aplicar</button>
     </form>
 
@@ -54,10 +59,5 @@
     {% include "partials/pagination.html" %}
 </section>
 
-<section class="benefits container">
-    <div><strong>Envío gratis</strong><span>En todas las compras</span></div>
-    <div><strong>3 y 6 cuotas</strong><span>Sin interés</span></div>
-    <div><strong>Cambios fáciles</strong><span>Hasta 30 días</span></div>
-    <div><strong>Atención personalizada</strong><span>Por WhatsApp</span></div>
-</section>
+
 {% endblock %}

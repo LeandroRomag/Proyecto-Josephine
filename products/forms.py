@@ -1,6 +1,16 @@
 from django import forms
 
-from .models import Category, Product
+from .models import Category, Drop, Product
+
+
+class DropAdminForm(forms.ModelForm):
+    class Meta:
+        model = Drop
+        fields = ['name', 'release_date', 'image', 'description', 'is_active']
+        widgets = {
+            'release_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
 
 
 class ProductAdminForm(forms.ModelForm):
@@ -9,6 +19,17 @@ class ProductAdminForm(forms.ModelForm):
     gallery_image_3 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
     gallery_image_4 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
     gallery_image_5 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
+    gallery_image_6 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
+    gallery_image_7 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
+    gallery_image_8 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
+    gallery_image_9 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
+    gallery_image_10 = forms.ImageField(required=False, widget=forms.FileInput(attrs={'accept': 'image/*'}))
+    
+    drop = forms.ModelChoiceField(
+        queryset=Drop.objects.filter(is_active=True),
+        required=False,
+        empty_label="Sin Drop asignado"
+    )
 
     categories = forms.ModelMultipleChoiceField(
         queryset=Category.objects.all(),
@@ -18,7 +39,7 @@ class ProductAdminForm(forms.ModelForm):
 
     class Meta:
         model = Product
-        fields = ['name', 'sku', 'description', 'price', 'categories']
+        fields = ['name', 'sku', 'description', 'price', 'categories', 'drop']
         widgets = {
             'name': forms.TextInput(attrs={'placeholder': 'Ej. Top manga larga Olivia'}),
             'sku': forms.TextInput(attrs={'placeholder': 'SKU-001'}),

@@ -12,6 +12,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
+import mercadopago
+from django.urls import reverse
+from django.conf import settings
 
 from cart.models import Cart
 from orders.models import Order, ProductReservation
@@ -59,8 +62,34 @@ class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
 
         external_reference = f"JOSEPHINE-{order.id}-{uuid4().hex[:12]}"
         checkout_url = ''
+        
         if provider == PaymentTransaction.ProviderChoices.MERCADO_PAGO:
-            checkout_url = f"https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id={external_reference}"
+            
+            # 1. Inicializamos el SDK con tu token de Mercado Pago
+            sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
+
+            # 2. Generamos dinámicamente la URL absoluta hacia la home ('web:index')
+            inicio_url = request.build_absolute_uri(reverse('web:index'))
+
+            # 3. Armamos la data de la preferencia
+            preference_data = {
+                        "items": [...],
+                        "back_urls": {
+                            "success": inicio_url, # URL absoluta al inicio
+                            "failure": inicio_url,
+                            "pending": inicio_url
+                        },
+                    "auto_return": "all", # Cambia de "approved" a "all"
+                    "external_reference": external_reference,
+}
+
+            # 4. Creamos la preferencia en MP y obtenemos la URL real de pago
+            preference_response = sdk.preference().create(preference_data)
+            preference = preference_response["response"]
+            
+            # init_point es la URL de pago para producción. 
+            # Si usás credenciales de prueba, podés cambiarlo por "sandbox_init_point"
+            checkout_url = preference.get("init_point", "")
 
         transaction = PaymentTransaction.objects.create(
             user=request.user if request.user.is_authenticated else None,
@@ -84,7 +113,6 @@ class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
             PaymentTransactionSerializer(transaction).data,
             status=status.HTTP_201_CREATED,
         )
-
     @action(detail=False, methods=['post'])
     def cash(self, request):
         return Response(
@@ -94,6 +122,15 @@ class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def webhook(self, request):
+        # 1. Agregamos esta validación para ignorar "merchant_order" con un 200 OK
+        topic = request.query_params.get('topic') or request.query_params.get('type') or request.data.get('type') or ''
+        if topic == 'merchant_order':
+            return Response(
+                {'detail': 'Notificación de merchant_order ignorada correctamente.'},
+                status=status.HTTP_200_OK
+            )
+
+        # 2. El resto del código se mantiene igual
         webhook_data = _build_mp_webhook_data(request)
         if webhook_data is None:
             return Response(
@@ -135,7 +172,6 @@ class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
                 _mark_order_payment_failed(transaction.order)
 
         return Response(PaymentTransactionSerializer(transaction).data)
-
 
 def _build_mp_webhook_data(request):
     payload = {}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, ProductColor, ProductGalleryImage
+from .models import Category, Product, ProductColor, ProductGalleryImage, Drop
 
 
 @admin.register(Category)
@@ -11,6 +11,10 @@ class CategoryAdmin(admin.ModelAdmin):
         return obj.product_set.count()
     product_count.short_description = 'Productos'
 
+@admin.register(Drop)
+class DropAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'release_date', 'is_active']
+    search_fields = ['name']
 
 class ProductInlineAdmin(admin.TabularInline):
     model = Product.categories.through
@@ -42,8 +46,8 @@ class ProductAdmin(admin.ModelAdmin):
         ('Precio y Stock', {
             'fields': ('price', 'stock')
         }),
-        ('Categorías', {
-            'fields': ('categories',)
+        ('Categorías y Lanzamiento', {
+            'fields': ('categories', 'drop')
         }),
     )
 

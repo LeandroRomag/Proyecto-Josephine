@@ -231,7 +231,6 @@
         {% endif %}
       </div>
     </section>
-
     <aside class="checkout-sidebar">
       <div class="checkout-summary-card checkout-card">
         <div class="checkout-panel-intro checkout-panel-intro--tight">
@@ -350,7 +349,6 @@
     </div>
   </div>
 </div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (() => {
@@ -367,7 +365,12 @@
   const lonInput = document.getElementById('id_longitude');
   const promoCodeInput = document.querySelector('[name="promo_code"]');
   const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-  const subtotalValue = parseFloat('{{ total|default:0 }}') || 0;
+  
+  // Variables de totales modificadas para soportar el descuento inicial
+  const subtotalValue = parseFloat('{{ total|default:0 }}'.replace(',', '.')) || 0;
+  const initialDiscount = parseFloat('{{ discount_amount|default:0 }}'.replace(',', '.')) || 0;
+  const initialTotal = parseFloat('{{ discounted_total|default:payment_total|default:total|default:0 }}'.replace(',', '.')) || subtotalValue;
+
   const checkoutDiscountRow = document.getElementById('checkout-discount-row');
   const checkoutDiscountValue = document.getElementById('checkout-discount-value');
   const checkoutTotalValue = document.getElementById('checkout-total-value');
@@ -468,9 +471,11 @@
 
   async function previewPromoDiscount() {
     const promoCode = (promoCodeInput?.value || '').trim();
+    
+    // Corrección: Si no hay código ingresado, mantenemos los valores iniciales.
     if (!promoCode) {
-      setDiscountPreview(0, subtotalValue);
-      return { discountAmount: 0, totalAfterDiscount: subtotalValue };
+      setDiscountPreview(initialDiscount, initialTotal);
+      return { discountAmount: initialDiscount, totalAfterDiscount: initialTotal };
     }
 
     try {
@@ -487,8 +492,9 @@
       return { discountAmount, totalAfterDiscount };
     } catch (error) {
       console.warn('No se pudo previsualizar el descuento.', error);
-      setDiscountPreview(0, subtotalValue);
-      return { discountAmount: 0, totalAfterDiscount: subtotalValue };
+      // En caso de error validando el código nuevo, revertimos al descuento inicial
+      setDiscountPreview(initialDiscount, initialTotal);
+      return { discountAmount: initialDiscount, totalAfterDiscount: initialTotal };
     }
   }
 

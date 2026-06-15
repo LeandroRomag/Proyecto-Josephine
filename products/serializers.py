@@ -1,6 +1,11 @@
 from rest_framework import serializers
-from .models import Product, Category, ProductColor
+from .models import Product, Category, ProductColor, Drop
 
+
+class DropSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Drop
+        fields = ['id', 'name', 'image', 'release_date']
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,6 +22,14 @@ class ProductColorSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     categories = CategorySerializer(many=True, read_only=True)
     colors = ProductColorSerializer(many=True, read_only=True)
+    drop = DropSerializer(read_only=True)
+    drop_id = serializers.PrimaryKeyRelatedField(
+        queryset=Drop.objects.all(),
+        write_only=True,
+        source='drop',
+        required=False,
+        allow_null=True
+    )
     category_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
         many=True,

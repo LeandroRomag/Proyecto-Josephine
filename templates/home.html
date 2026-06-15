@@ -15,12 +15,34 @@
             </p>
             <a href="#shop" class="btn btn--dark">Ver colección</a>
         </div>
-        <div class="hero__media">
-            <img src="{% if product_tiles %}{{ product_tiles.0.image }}{% else %}https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1600&q=80{% endif %}" alt="Modelos colección BY Josephine">
-            <span class="hero__sticker">NEW<br>DROP</span>
-        </div>
+        
     </div>
 </section>
+
+</section>
+
+    </section>
+
+    {% if drops %}
+    <section class="shop container" style="margin-bottom: 60px;">
+        <header class="shop__head">
+            <h2>New Drops</h2>
+            <p>Explorá los lanzamientos más recientes y campañas exclusivas de la marca.</p>
+        </header>
+
+        <div class="drops-showcase">
+            {% for drop in drops %}
+                {% if drop.image %}
+                <a href="{% url 'web:catalog' %}?drop={{ drop.id }}" class="drop-banner">
+                    <img src="{{ drop.image.url }}" alt="{{ drop.name }}" class="drop-banner__bg">
+                    <div class="drop-banner__overlay"></div>
+                    <h2 class="drop-banner__title">{{ drop.name }}</h2>
+                </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 
 <section id="shop" class="shop container">
     <header class="shop__head">
@@ -37,10 +59,5 @@
     {% include "partials/pagination.html" %}
 </section>
 
-<section class="benefits container">
-    <div><strong>Envío gratis</strong><span>En todas las compras</span></div>
-    <div><strong>3 y 6 cuotas</strong><span>Sin interés</span></div>
-    <div><strong>Cambios fáciles</strong><span>Hasta 30 días</span></div>
-    <div><strong>Atención personalizada</strong><span>Por WhatsApp</span></div>
-</section>
+
 {% endblock %}

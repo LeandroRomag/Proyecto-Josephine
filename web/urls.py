@@ -1,4 +1,5 @@
 from django.urls import path
+from . import views
 
 from .views import (
     cart_view,
@@ -60,4 +61,8 @@ urlpatterns = [
     path('panel/promocion-nueva/', admin_promotion_new, name='admin_promotion_new'),
     path('panel/promocion/<int:pk>/editar/', admin_promotion_edit, name='admin_promotion_edit'),
     path('panel/promocion/<int:pk>/eliminar/', admin_promotion_delete, name='admin_promotion_delete'),
+    path('panel/drops/', views.admin_drops_list, name='admin_drops_list'),
+    path('panel/drops/nuevo/', views.admin_drop_new, name='admin_drop_new'),
+    path('panel/drops/<int:pk>/editar/', views.admin_drop_edit, name='admin_drop_edit'),
+    path('panel/drops/<int:pk>/eliminar/', views.admin_drop_delete, name='admin_drop_delete'),
 ]

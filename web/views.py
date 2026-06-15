@@ -7,6 +7,8 @@ from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 
 from django.contrib import messages
+from products.models import Drop
+from products.forms import DropAdminForm
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -25,7 +27,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from cart.models import Cart, CartItem
 from orders.models import Order, OrderItem
 from payments.models import PaymentTransaction
-from products.models import Category, Product, ProductColor, ProductGalleryImage
+from products.models import Category, Drop, Product, ProductColor, ProductGalleryImage
 from products.forms import CategoryAdminForm, ProductAdminForm
 from products.forms import ProductVariantForm
 from promotions.forms import PromotionAdminForm
@@ -322,7 +324,7 @@ def _build_product_color_rows_from_post(post_data):
 def _build_product_gallery_slots_from_product(product):
     gallery_images = list(product.gallery_images.order_by('position')) if product else []
     slots = []
-    for position in range(1, 6):
+    for position in range(1, 11):
         gallery_image = next((item for item in gallery_images if item.position == position), None)
         slots.append({
             'position': position,
@@ -338,7 +340,7 @@ def _save_product_gallery_images(product, files, post_data):
     Save uploaded gallery images and handle deletion flags from the admin form.
     Expects `post_data` (request.POST) to contain optional `gallery_delete_<pos>` flags.
     """
-    for position in range(1, 6):
+    for position in range(1, 11):
         delete_flag = post_data.get(f'gallery_delete_{position}')
         existing_image = ProductGalleryImage.objects.filter(product=product, position=position).first()
         if delete_flag and existing_image:
@@ -516,47 +518,28 @@ def _create_mercado_pago_preference(order, payment_transaction):
 
 
 def index(request):
-    search_form = SiteSearchForm(request.GET or None)
-    featured_products = Product.objects.prefetch_related('categories', 'colors__variants', 'variants', 'gallery_images').order_by('-id')
-
-    if search_form.is_valid():
-        query = (search_form.cleaned_data.get('q') or '').strip()
-        if query:
-            featured_products = featured_products.filter(
-                Q(name__icontains=query) | Q(description__icontains=query) | Q(sku__icontains=query)
-            ).distinct()
-
-    category_id = request.GET.get('category')
-    if category_id and str(category_id).isdigit():
-        featured_products = featured_products.filter(categories__id=category_id).distinct()
-
-    active_promotions = Promotion.objects.filter(is_active=True).order_by('-id')[:3]
-    shipping_zones = ShippingZone.objects.filter(is_active=True).order_by('name')
-    page_obj, pagination_query = _paginate_queryset(request, featured_products)
-    products = list(page_obj.object_list)
+    # Tu lógica actual que trae los productos para la home...
+    products = Product.objects.prefetch_related('categories', 'colors__variants', 'variants', 'gallery_images').filter(is_deleted=False).order_by('-id')[:8]
+    
+    # 🌟 PASO A: AGREGÁ ESTA LÍNEA AQUÍ (Trae los lanzamientos activos)
+    drops = Drop.objects.filter(is_active=True).order_by('-id')
 
     return render(request, 'home.html', {
-        'featured_products': products,
+        'products': products,
         'product_tiles': _build_product_tiles(products),
-        'hero_card': products[0] if products else None,
-        'active_promotions': active_promotions,
-        'shipping_zones': shipping_zones,
-        'promo_titles': [
-            '3 Y 6 CUOTAS SIN INTERÉS',
-            'HOT SALE - HASTA 70% OFF',
-            'NUEVA COLECCIÓN DISPONIBLE',
-            'ENVÍO GRATIS EN COMPRAS +$80.000',
-        ],
-        'search_form': search_form,
-        'page_obj': page_obj,
-        'pagination_query': pagination_query,
+        # ... cualquier otra variable que ya tengas en tu contexto ...
+        
+        # 🌟 PASO B: SUMÁ ESTA LÍNEA AL CONTEXTO
+        'drops': drops,
     })
-
 
 def catalog(request):
     search_form = SiteSearchForm(request.GET or None)
     products = Product.objects.prefetch_related('categories', 'colors__variants', 'variants', 'gallery_images').order_by('-id')
+    
+    # 🌟 1. Atrapamos ambos parámetros
     category_id = request.GET.get('category')
+    drop_id = request.GET.get('drop')
 
     if search_form.is_valid():
         query = (search_form.cleaned_data.get('q') or '').strip()
@@ -567,6 +550,10 @@ def catalog(request):
 
     if category_id and str(category_id).isdigit():
         products = products.filter(categories__id=category_id).distinct()
+        
+    # 🌟 2. Aplicamos el filtro del Drop si el usuario seleccionó uno
+    if drop_id and str(drop_id).isdigit():
+        products = products.filter(drop_id=drop_id).distinct()
 
     page_obj, pagination_query = _paginate_queryset(request, products)
     page_products = list(page_obj.object_list)
@@ -574,13 +561,14 @@ def catalog(request):
     return render(request, 'catalog.html', {
         'search_form': search_form,
         'category_id': category_id or '',
+        'drop_id': drop_id or '', # 🌟 3. Lo pasamos al contexto para que el select mantenga la opción elegida
         'categories': Category.objects.all().order_by('name'),
+        'drops': Drop.objects.filter(is_active=True).order_by('-id'), # 🌟 4. Mandamos los drops activos al HTML
         'products': page_products,
         'product_tiles': _build_product_tiles(page_products),
         'page_obj': page_obj,
         'pagination_query': pagination_query,
     })
-
 
 def product_detail(request, pk):
     product = get_object_or_404(Product.objects.prefetch_related('categories', 'colors__variants', 'variants', 'gallery_images'), pk=pk)
@@ -1427,6 +1415,11 @@ def _admin_product_form_context(request, product=None, saved=False):
         'gallery_slot_3': {'field': form['gallery_image_3'], 'existing_url': gallery_slots[2]['existing_url']},
         'gallery_slot_4': {'field': form['gallery_image_4'], 'existing_url': gallery_slots[3]['existing_url']},
         'gallery_slot_5': {'field': form['gallery_image_5'], 'existing_url': gallery_slots[4]['existing_url']},
+        'gallery_slot_6': {'field': form['gallery_image_6'], 'existing_url': gallery_slots[5]['existing_url']},
+        'gallery_slot_7': {'field': form['gallery_image_7'], 'existing_url': gallery_slots[6]['existing_url']},
+        'gallery_slot_8': {'field': form['gallery_image_8'], 'existing_url': gallery_slots[7]['existing_url']},
+        'gallery_slot_9': {'field': form['gallery_image_9'], 'existing_url': gallery_slots[8]['existing_url']},
+        'gallery_slot_10': {'field': form['gallery_image_10'], 'existing_url': gallery_slots[9]['existing_url']},
         'promotions': promotions,
         'selected_promotion_id': selected_promotion.id if selected_promotion else '',
         'saved': saved,
@@ -1499,6 +1492,11 @@ def admin_product_new(request):
         'gallery_slot_3': {'field': form['gallery_image_3'], 'existing_url': ''},
         'gallery_slot_4': {'field': form['gallery_image_4'], 'existing_url': ''},
         'gallery_slot_5': {'field': form['gallery_image_5'], 'existing_url': ''},
+        'gallery_slot_6': {'field': form['gallery_image_6'], 'existing_url': ''},
+        'gallery_slot_7': {'field': form['gallery_image_7'], 'existing_url': ''},
+        'gallery_slot_8': {'field': form['gallery_image_8'], 'existing_url': ''},
+        'gallery_slot_9': {'field': form['gallery_image_9'], 'existing_url': ''},
+        'gallery_slot_10': {'field': form['gallery_image_10'], 'existing_url': ''},
         'form': form,
         'formset': formset,
         'color_rows': color_rows,
@@ -1585,6 +1583,11 @@ def admin_product_edit(request, pk):
         'gallery_slot_3': {'field': form['gallery_image_3'], 'existing_url': _build_product_gallery_slots_from_product(product)[2]['existing_url']},
         'gallery_slot_4': {'field': form['gallery_image_4'], 'existing_url': _build_product_gallery_slots_from_product(product)[3]['existing_url']},
         'gallery_slot_5': {'field': form['gallery_image_5'], 'existing_url': _build_product_gallery_slots_from_product(product)[4]['existing_url']},
+        'gallery_slot_6': {'field': form['gallery_image_6'], 'existing_url': _build_product_gallery_slots_from_product(product)[5]['existing_url']},
+        'gallery_slot_7': {'field': form['gallery_image_7'], 'existing_url': _build_product_gallery_slots_from_product(product)[6]['existing_url']},
+        'gallery_slot_8': {'field': form['gallery_image_8'], 'existing_url': _build_product_gallery_slots_from_product(product)[7]['existing_url']},
+        'gallery_slot_9': {'field': form['gallery_image_9'], 'existing_url': _build_product_gallery_slots_from_product(product)[8]['existing_url']},
+        'gallery_slot_10': {'field': form['gallery_image_10'], 'existing_url': _build_product_gallery_slots_from_product(product)[9]['existing_url']},
         'form': form,
         'formset': formset,
         'color_rows': color_rows,
@@ -1851,3 +1854,114 @@ def password_reset_confirm_view(request, uidb64, token):
         'hide_site_chrome': True,
         'token_is_valid': token_is_valid,
     })
+    
+def admin_drops_list(request):
+    query = request.GET.get('q', '')
+    status_filter = request.GET.get('status', 'all')
+    drops = Drop.objects.all().order_by('-id')
+
+    if query:
+        drops = drops.filter(name__icontains=query)
+
+    # 🌟 FILTRAMOS POR IS_ACTIVE
+    if status_filter == 'active':
+        drops = drops.filter(is_active=True)
+    elif status_filter == 'deleted':
+        drops = drops.filter(is_active=False)
+
+    return render(request, 'admin/drop_list.html', {
+        'drops': drops, 'query': query, 'status': status_filter
+    })
+
+def admin_drop_delete(request, pk):
+    if request.method == 'POST':
+        drop = get_object_or_404(Drop, pk=pk)
+        
+        # 🌟 BORRADO LÓGICO: Solo lo pasamos a falso
+        drop.is_active = False 
+        drop.save()
+        
+        messages.success(request, 'Drop desactivado/eliminado correctamente.')
+    return redirect('web:admin_drops_list')
+def admin_drops_list(request):
+    """
+    Lista todos los drops en el panel.
+    Permite buscar por texto y filtrar por estado (Activos / Inactivos).
+    """
+    query = request.GET.get('q', '')
+    status_filter = request.GET.get('status', 'all')
+    
+    # Traemos todos los registros ordenados por el más reciente
+    drops = Drop.objects.all().order_by('-id')
+
+    # Filtro de búsqueda por nombre
+    if query:
+        drops = drops.filter(name__icontains=query)
+
+    # Filtro de estado basado en el campo is_active
+    if status_filter == 'active':
+        drops = drops.filter(is_active=True)
+    elif status_filter == 'deleted':
+        drops = drops.filter(is_active=False)
+
+    return render(request, 'admin/drop_list.html', {
+        'drops': drops,
+        'query': query,
+        'status': status_filter
+    })
+
+
+def admin_drop_new(request):
+    """
+    Vista para crear un nuevo Drop.
+    Maneja la carga de imágenes de campaña mediante request.FILES.
+    """
+    if request.method == 'POST':
+        form = DropAdminForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '✓ Drop creado exitosamente.')
+            return redirect('web:admin_drops_list')
+    else:
+        form = DropAdminForm()
+        
+    return render(request, 'admin/drop_new.html', {
+        'form': form, 
+        'edit_mode': False
+    })
+
+
+def admin_drop_edit(request, pk):
+    """
+    Vista para modificar un Drop existente.
+    Recibe el parámetro 'edit_mode' en True para adaptar los títulos del HTML.
+    """
+    drop = get_object_or_404(Drop, pk=pk)
+    
+    if request.method == 'POST':
+        form = DropAdminForm(request.POST, request.FILES, instance=drop)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '✓ Drop actualizado correctamente.')
+            return redirect('web:admin_drops_list')
+    else:
+        form = DropAdminForm(instance=drop)
+        
+    return render(request, 'admin/drop_new.html', {
+        'form': form, 
+        'edit_mode': True
+    })
+
+
+def admin_drop_delete(request, pk):
+    """
+    Vista de borrado lógico para Drops.
+    Cambia el estado de 'is_active' a False en lugar de removerlo de las tablas.
+    """
+    if request.method == 'POST':
+        drop = get_object_or_404(Drop, pk=pk)
+        drop.is_active = False  # Desactivación / Borrado lógico
+        drop.save()
+        messages.success(request, '✓ Drop desactivado/eliminado correctamente.')
+        
+    return redirect('web:admin_drops_list')

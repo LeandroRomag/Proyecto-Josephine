@@ -14,19 +14,11 @@ class CartViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Cart.objects.all()
 
-    def get_queryset(self):
-        return Cart.objects.filter(user=self.request.user)
-
-    @action(detail=False, methods=['get'])
-    def my_cart(self, request):
-        cart, created = Cart.objects.get_or_create(user=request.user)
-        serializer = self.get_serializer(cart)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['post'])
-    def add_item(self, request):
+@action(detail=False, methods=['post'])
+def add_item(self, request):
         cart, created = Cart.objects.get_or_create(user=request.user)
         product_id = request.data.get('product_id')
+        variant_id = request.data.get('variant_id') # 🌟 CORRECCIÓN: Capturamos la variante
         quantity = request.data.get('quantity', 1)
 
         if not product_id:
@@ -40,9 +32,11 @@ class CartViewSet(viewsets.ModelViewSet):
         if product.stock < quantity:
             return Response({'error': 'Stock insuficiente'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 🌟 CORRECCIÓN: Buscamos o creamos separando por producto Y variante exacta
         cart_item, item_created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
+            variant_id=variant_id, 
             defaults={'quantity': quantity}
         )
 
@@ -53,30 +47,34 @@ class CartViewSet(viewsets.ModelViewSet):
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['post'])
-    def remove_item(self, request):
+@action(detail=False, methods=['post'])
+def remove_item(self, request):
         cart = get_object_or_404(Cart, user=request.user)
         product_id = request.data.get('product_id')
+        variant_id = request.data.get('variant_id') # 🌟 CORRECCIÓN: Saber qué variante borrar
 
         if not product_id:
             return Response({'error': 'product_id requerido'}, status=status.HTTP_400_BAD_REQUEST)
 
-        cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id)
+        # 🌟 CORRECCIÓN: Filtramos por item específico
+        cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id, variant_id=variant_id)
         cart_item.delete()
 
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['post'])
-    def update_item(self, request):
+@action(detail=False, methods=['post'])
+def update_item(self, request):
         cart = get_object_or_404(Cart, user=request.user)
         product_id = request.data.get('product_id')
+        variant_id = request.data.get('variant_id') # 🌟 CORRECCIÓN: Capturamos variante a actualizar
         quantity = request.data.get('quantity')
 
         if not product_id or quantity is None:
             return Response({'error': 'product_id y quantity requeridos'}, status=status.HTTP_400_BAD_REQUEST)
 
-        cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id)
+        # 🌟 CORRECCIÓN: Buscamos el registro preciso
+        cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id, variant_id=variant_id)
 
         product = cart_item.product
         if product.stock < quantity:
@@ -88,12 +86,5 @@ class CartViewSet(viewsets.ModelViewSet):
             cart_item.quantity = quantity
             cart_item.save()
 
-        serializer = CartSerializer(cart)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['post'])
-    def clear(self, request):
-        cart = get_object_or_404(Cart, user=request.user)
-        cart.items.all().delete()
         serializer = CartSerializer(cart)
         return Response(serializer.data)

@@ -18,7 +18,7 @@
             {% for item in cart_items %}
             <article class="cart-item">
                 <div class="cart-item__image">
-                    <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80{% endif %}" alt="{{ item.product.name }}">
+                    <img src="{% if item.product.primary_image_url %}{{ item.product.primary_image_url }}{% else %}https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80{% endif %}" alt="{{ item.product.name }}">
                 </div>
 
                 <div class="cart-item__copy">
@@ -26,11 +26,13 @@
                     {% if item.variant %}
                     <div class="cart-item__meta cart-item__meta--variant">
                         <span class="cart-item__meta-item">talle: {{ item.variant.size }}</span>
+                        
                         {% if item.variant.color %}
                         <span class="cart-item__meta-sep">·</span>
                         <span class="cart-item__meta-item cart-item__meta-item--color">
-                            {% if item.variant.color.color_hex %}<i class="cart-item__color-swatch" style="background: {{ item.variant.color.color_hex }}"></i>{% endif %}
-                            color: {{ item.variant.color.display_name }}
+                            {% if item.variant.color.color_hex %}
+                                <i class="cart-item__color-swatch" style="background-color: {% if '#' not in item.variant.color.color_hex %}#{% endif %}{{ item.variant.color.color_hex }}; display: inline-block; vertical-align: middle; width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15);"></i>
+                            {% endif %}
                         </span>
                         {% endif %}
                     </div>

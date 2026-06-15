@@ -104,3 +104,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         featured_products = self.get_queryset().filter(stock__gte=5)[:10]
         serializer = self.get_serializer(featured_products, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def by_drop(self, request):
+        """ Endpoint directo para traer productos por Drop """
+        drop_id = request.query_params.get('drop_id')
+        if not drop_id:
+            return Response({'error': 'drop_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        queryset = self.get_queryset().filter(drop_id=drop_id)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

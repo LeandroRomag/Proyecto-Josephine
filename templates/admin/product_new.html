@@ -1,5 +1,24 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block title %}{% if edit_mode %}Editar producto{% else %}Crear producto{% endif %} — BY Josephine{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+  <style>
+    .variant-table { width:100%; border-collapse: collapse; margin-bottom: 12px }
+    .variant-table th, .variant-table td { border:1px solid #eee; padding:8px; text-align:left }
+    .variant-delete input[type=checkbox] { transform: scale(1.2) }
+    .variant-inline-title { margin: 18px 0 10px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .sizes-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .size-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .72fr) auto; gap: 10px; align-items: end; }
+    .size-field { display: flex; flex-direction: column; gap: 6px; }
+    .size-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-fg); padding-left: 6px; }
+    .size-input, .stock-input { width: 100%; border: 1px solid #e8e8e8; border-radius: 999px; padding: 14px 18px; background: #fff; }
+    .size-remove, .size-add { border: 0; background: transparent; cursor: pointer; }
+    .size-add { margin-top: 8px; text-align: left; padding: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  </style>
+{% endblock %}
 
 {% block content %}
 <main class="admin-main admin-form-main">
@@ -67,12 +86,9 @@
       {{ form.description }}
       {{ form.description.errors }}
     </div>
-
-    {# Main image removed from form; use gallery slot 1 as portada instead #}
-
     <div class="field">
       <label>Galería de fotos</label>
-      <p class="palette-help">La portada sigue siendo la imagen principal. Podés sumar hasta 4 fotos extra para el detalle.</p>
+      <p class="palette-help">La portada sigue siendo la imagen principal. Podés sumar hasta 9 fotos extra para el detalle.</p>
       <div class="product-gallery-admin">
         <div class="product-gallery-admin__slot product-gallery-admin__slot--cover">
           <span class="product-gallery-admin__label">Portada (primera foto)</span>
@@ -154,6 +170,86 @@
               <label><input type="checkbox" name="gallery_delete_5" value="1"> Eliminar</label>
             {% endif %}
           </div>
+        </div> 
+
+        <div class="product-gallery-admin__slot">
+          <span class="product-gallery-admin__label">Foto 6</span>
+          {% if gallery_slot_6.existing_url %}
+            <div class="product-gallery-admin__preview"><img src="{{ gallery_slot_6.existing_url }}" alt="Foto 6 de {{ product.name|default:'producto' }}"></div>
+          {% else %}
+            <div class="product-gallery-admin__preview product-gallery-admin__preview--empty">Sin foto</div>
+          {% endif %}
+          <div class="product-gallery-admin__field">
+            {{ gallery_slot_6.field }}
+            {{ gallery_slot_6.field.errors }}
+            {% if gallery_slot_6.existing_url %}
+              <label><input type="checkbox" name="gallery_delete_6" value="1"> Eliminar</label>
+            {% endif %}
+          </div>
+        </div> 
+
+        <div class="product-gallery-admin__slot">
+          <span class="product-gallery-admin__label">Foto 7</span>
+          {% if gallery_slot_7.existing_url %}
+            <div class="product-gallery-admin__preview"><img src="{{ gallery_slot_7.existing_url }}" alt="Foto 7 de {{ product.name|default:'producto' }}"></div>
+          {% else %}
+            <div class="product-gallery-admin__preview product-gallery-admin__preview--empty">Sin foto</div>
+          {% endif %}
+          <div class="product-gallery-admin__field">
+            {{ gallery_slot_7.field }}
+            {{ gallery_slot_7.field.errors }}
+            {% if gallery_slot_7.existing_url %}
+              <label><input type="checkbox" name="gallery_delete_7" value="1"> Eliminar</label>
+            {% endif %}
+          </div>
+        </div> 
+
+        <div class="product-gallery-admin__slot">
+          <span class="product-gallery-admin__label">Foto 8</span>
+          {% if gallery_slot_8.existing_url %}
+            <div class="product-gallery-admin__preview"><img src="{{ gallery_slot_8.existing_url }}" alt="Foto 8 de {{ product.name|default:'producto' }}"></div>
+          {% else %}
+            <div class="product-gallery-admin__preview product-gallery-admin__preview--empty">Sin foto</div>
+          {% endif %}
+          <div class="product-gallery-admin__field">
+            {{ gallery_slot_8.field }}
+            {{ gallery_slot_8.field.errors }}
+            {% if gallery_slot_8.existing_url %}
+              <label><input type="checkbox" name="gallery_delete_8" value="1"> Eliminar</label>
+            {% endif %}
+          </div>
+        </div> 
+
+        <div class="product-gallery-admin__slot">
+          <span class="product-gallery-admin__label">Foto 9</span>
+          {% if gallery_slot_9.existing_url %}
+            <div class="product-gallery-admin__preview"><img src="{{ gallery_slot_9.existing_url }}" alt="Foto 9 de {{ product.name|default:'producto' }}"></div>
+          {% else %}
+            <div class="product-gallery-admin__preview product-gallery-admin__preview--empty">Sin foto</div>
+          {% endif %}
+          <div class="product-gallery-admin__field">
+            {{ gallery_slot_9.field }}
+            {{ gallery_slot_9.field.errors }}
+            {% if gallery_slot_9.existing_url %}
+              <label><input type="checkbox" name="gallery_delete_9" value="1"> Eliminar</label>
+            {% endif %}
+          </div>
+        </div> 
+
+        <div class="product-gallery-admin__slot">
+          <span class="product-gallery-admin__label">Foto 10</span>
+          {% if gallery_slot_10.existing_url %}
+            <div class="product-gallery-admin__preview"><img src="{{ gallery_slot_10.existing_url }}" alt="Foto 10 de {{ product.name|default:'producto' }}"></div>
+          {% else %}
+            <div class="product-gallery-admin__preview product-gallery-admin__preview--empty">Sin foto</div>
+          {% endif %}
+          <div class="product-gallery-admin__field">
+            {{ gallery_slot_10.field }}
+            {{ gallery_slot_10.field.errors }}
+            {% if gallery_slot_10.existing_url %}
+              <label><input type="checkbox" name="gallery_delete_10" value="1"> Eliminar</label>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -188,10 +284,8 @@
         </div>
         {% endfor %}
       </div>
-
       <button type="button" class="color-row-add" id="addColorRow">+ Agregar otro color</button>
     </div>
-
     <datalist id="palette-colors"></datalist>
 
     <div class="admin-variants" style="display:none">
@@ -199,6 +293,13 @@
         {{ formset.management_form }}
         <template id="empty-form-template" style="display:none">{{ formset.empty_form.as_table|safe }}</template>
       {% endif %}
+    </div>
+
+    <div class="field">
+      <label for="{{ form.drop.id_for_label }}">Drop / Colección (Opcional)</label>
+      {{ form.drop }}
+      <div class="admin-field-error">{{ form.drop.errors }}</div>
+      <p class="palette-help">Asociá este producto a un lanzamiento temporal.</p>
     </div>
 
     <div class="field">
@@ -426,228 +527,3 @@
   })();
 </script>
 {% endblock %}
-{% load static %}
-{% block extra_head %}
-  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
-  <style>
-    .variant-table { width:100%; border-collapse: collapse; margin-bottom: 12px }
-    .variant-table th, .variant-table td { border:1px solid #eee; padding:8px; text-align:left }
-    .variant-delete input[type=checkbox] { transform: scale(1.2) }
-    .variant-inline-title { margin: 18px 0 10px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
-    .sizes-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-    .size-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .72fr) auto; gap: 10px; align-items: end; }
-    .size-field { display: flex; flex-direction: column; gap: 6px; }
-    .size-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted-fg); padding-left: 6px; }
-    .size-input, .stock-input { width: 100%; border: 1px solid #e8e8e8; border-radius: 999px; padding: 14px 18px; background: #fff; }
-    .size-remove, .size-add { border: 0; background: transparent; cursor: pointer; }
-    .size-add { margin-top: 8px; text-align: left; padding: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
-  </style>
-{% endblock %}
-
-<script>
-  (function () {
-    var builder = document.getElementById('colorBuilder');
-    var addButton = document.getElementById('addColorRow');
-    var form = document.querySelector('form.admin-form');
-    var variantArea = document.querySelector('.admin-variants');
-    var managementTotal = document.querySelector('[name$="TOTAL_FORMS"]');
-    var managementInitial = document.querySelector('[name$="INITIAL_FORMS"]');
-    var managementMin = document.querySelector('[name$="MIN_NUM_FORMS"]');
-    var managementMax = document.querySelector('[name$="MAX_NUM_FORMS"]');
-    if (!builder || !addButton || !form) return;
-
-    var rowTemplate = '<div class="color-row" data-row>' +
-      '<div class="color-wheel-shell" aria-hidden="true"><div class="color-wheel-ring"></div><div class="color-wheel-core"></div></div>' +
-      '<label class="color-row-label">Color</label>' +
-      '<div class="color-row-picker-wrap"><input type="color" class="color-wheel-input" value="#d98bb0" aria-label="Elegir color"></div>' +
-      '<input type="text" name="colors_hex" class="color-hex-input" placeholder="#d98bb0" value="#d98bb0" autocomplete="off">' +
-      '<p class="palette-current" data-current-hex>#d98bb0</p>' +
-      '<button type="button" class="color-row-remove" aria-label="Eliminar color">×</button>' +
-      '<div class="variant-inline-title">Talles y stock</div>' +
-      '<div class="sizes-list">' +
-        '<div class="size-row">' +
-          '<div class="size-field"><span class="size-field-label">Talle</span><input type="text" class="size-input" placeholder="Ej. S / M / L / 38"></div>' +
-          '<div class="size-field"><span class="size-field-label">Stock</span><input type="number" class="stock-input" min="0" value="0"></div>' +
-          '<button type="button" class="size-remove" aria-label="Eliminar talle">×</button>' +
-        '</div>' +
-      '</div>' +
-      '<button type="button" class="size-add">+ Agregar talle</button>' +
-      '</div>';
-
-    function normalizeHex(value) {
-      var cleaned = (value || '').trim();
-      if (!cleaned) return '';
-      if (cleaned.charAt(0) !== '#') cleaned = '#' + cleaned;
-      if (/^#[0-9a-fA-F]{6}$/.test(cleaned)) return cleaned.toLowerCase();
-      return '';
-    }
-
-    function setActiveRow(row) {
-      builder.querySelectorAll('.color-row').forEach(function (node) {
-        node.classList.toggle('is-active', node === row);
-      });
-    }
-
-    function bindSizeRow(sizeRow) {
-      var remove = sizeRow.querySelector('.size-remove');
-      if (remove) {
-        remove.addEventListener('click', function () {
-          var list = sizeRow.closest('.sizes-list');
-          if (list && list.querySelectorAll('.size-row').length > 1) {
-            sizeRow.remove();
-          }
-        });
-      }
-    }
-
-    function bindRow(row) {
-      var input = row.querySelector('.color-hex-input');
-      var remove = row.querySelector('.color-row-remove');
-      var picker = row.querySelector('.color-wheel-input');
-      var preview = row.querySelector('[data-current-hex]');
-      var shell = row.querySelector('.color-wheel-shell');
-      var sizeAdd = row.querySelector('.size-add');
-      var sizesList = row.querySelector('.sizes-list');
-
-      if (input) {
-        input.addEventListener('focus', function () { setActiveRow(row); });
-        input.addEventListener('input', function () {
-          setActiveRow(row);
-          var normalized = normalizeHex(input.value);
-          if (normalized) {
-            input.value = normalized;
-            if (picker) picker.value = normalized;
-            if (shell) shell.style.setProperty('--selected-color', normalized);
-            if (preview) preview.textContent = normalized;
-            updatePaletteDatalist();
-          }
-        });
-        var normalizedInitial = normalizeHex(input.value) || '#d98bb0';
-        input.value = normalizedInitial;
-        if (shell) shell.style.setProperty('--selected-color', normalizedInitial);
-        if (preview) preview.textContent = normalizedInitial;
-      }
-
-      if (picker) {
-        picker.addEventListener('input', function () {
-          if (!input) return;
-          input.value = picker.value;
-          if (shell) shell.style.setProperty('--selected-color', picker.value);
-          if (preview) preview.textContent = picker.value;
-          updatePaletteDatalist();
-          setActiveRow(row);
-        });
-      }
-
-      if (remove) {
-        remove.addEventListener('click', function () {
-          if (builder.querySelectorAll('.color-row').length > 1) {
-            var nextRow = row.nextElementSibling || row.previousElementSibling;
-            row.remove();
-            if (nextRow && nextRow.classList.contains('color-row')) {
-              setActiveRow(nextRow);
-            }
-            updatePaletteDatalist();
-          }
-        });
-      }
-
-      if (sizeAdd && sizesList) {
-        sizeAdd.addEventListener('click', function () {
-          var sizeRow = document.createElement('div');
-          sizeRow.className = 'size-row';
-          sizeRow.innerHTML = '' +
-            '<input type="text" class="size-input" placeholder="Ej. S / M / L / 38">' +
-            '<input type="number" class="stock-input" min="0" value="0">' +
-            '<button type="button" class="size-remove" aria-label="Eliminar talle">×</button>';
-          sizesList.appendChild(sizeRow);
-          bindSizeRow(sizeRow);
-        });
-      }
-
-      row.querySelectorAll('.size-row').forEach(function (sizeRow) {
-        bindSizeRow(sizeRow);
-      });
-    }
-
-    function updatePaletteDatalist() {
-      var list = document.getElementById('palette-colors');
-      if (!list) return;
-      list.innerHTML = '';
-      builder.querySelectorAll('.color-hex-input').forEach(function (input) {
-        var val = input.value && input.value.trim();
-        if (!val) return;
-        if (val.charAt(0) !== '#') val = '#' + val;
-        var opt = document.createElement('option');
-        opt.value = val.toLowerCase();
-        list.appendChild(opt);
-      });
-    }
-
-    function collectVariantInputs() {
-      if (!variantArea || !managementTotal) return;
-      document.querySelectorAll('[data-generated-variant-input="1"]').forEach(function (node) { node.remove(); });
-
-      var index = 0;
-      builder.querySelectorAll('.color-row').forEach(function (colorRow) {
-        var hexInput = colorRow.querySelector('.color-hex-input');
-        var colorHex = hexInput ? normalizeHex(hexInput.value) : '';
-        if (!colorHex) return;
-
-        colorRow.querySelectorAll('.size-row').forEach(function (sizeRow) {
-          var sizeInput = sizeRow.querySelector('.size-input');
-          var stockInput = sizeRow.querySelector('.stock-input');
-          var sizeValue = sizeInput ? (sizeInput.value || '').trim() : '';
-          var stockValue = stockInput ? (stockInput.value || '0').trim() : '0';
-          if (!sizeValue && stockValue === '0') return;
-
-          ['color_hex', 'size', 'stock'].forEach(function (fieldName) {
-            var hidden = document.createElement('input');
-            hidden.type = 'hidden';
-            hidden.name = 'form-' + index + '-' + fieldName;
-            hidden.setAttribute('data-generated-variant-input', '1');
-            if (fieldName === 'color_hex') hidden.value = colorHex;
-            if (fieldName === 'size') hidden.value = sizeValue;
-            if (fieldName === 'stock') hidden.value = stockValue;
-            variantArea.appendChild(hidden);
-          });
-
-          index += 1;
-        });
-      });
-
-      managementTotal.value = String(index);
-      if (managementInitial) managementInitial.value = '0';
-      if (managementMin) managementMin.value = '0';
-      if (managementMax) managementMax.value = '1000';
-    }
-
-    addButton.addEventListener('click', function () {
-      builder.insertAdjacentHTML('beforeend', rowTemplate);
-      var row = builder.lastElementChild;
-      bindRow(row);
-      setActiveRow(row);
-      var newInput = row.querySelector('.color-hex-input');
-      var newPicker = row.querySelector('.color-wheel-input');
-      var newShell = row.querySelector('.color-wheel-shell');
-      if (newInput) newInput.value = '#d98bb0';
-      if (newPicker) newPicker.value = '#d98bb0';
-      if (newShell) newShell.style.setProperty('--selected-color', '#d98bb0');
-      var preview = row.querySelector('[data-current-hex]');
-      if (preview) preview.textContent = '#d98bb0';
-      if (newInput) newInput.focus();
-      updatePaletteDatalist();
-    });
-
-    builder.querySelectorAll('.color-row').forEach(function (row) {
-      bindRow(row);
-    });
-
-    updatePaletteDatalist();
-    setActiveRow(builder.querySelector('.color-row'));
-
-    form.addEventListener('submit', function () {
-      collectVariantInputs();
-    });
-  })();
-</script>

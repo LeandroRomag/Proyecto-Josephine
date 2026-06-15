@@ -5,13 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}BY Josephine — Tienda online de ropa femenina{% endblock %}</title>
+   <link rel="icon" type="image/x-icon" href="/static/img/icons8-j-ios-17-filled-32.png">
     <meta name="description" content="{% block description %}Ropa femenina moderna y urbana. Envíos gratis y hasta 70% OFF.{% endblock %}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Trocchi&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=20260522">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}?">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -30,7 +31,7 @@
     <!-- Instagram floating button (above WhatsApp) -->
     {% if show_fabs %}
     <a class="instagram-fab" href="https://www.instagram.com/by_jjosephine/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Seguir en Instagram">
-        <img class="instagram-icon" src="{% static 'img/icons8-instagram-48.png' %}" alt="Instagram">
+        <img class="instagram-icon" src="{% static 'img/instagram.png' %}" alt="Instagram">
     </a>
     {% endif %}
 
