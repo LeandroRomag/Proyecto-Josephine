@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Iniciar sesión — BY Josephine{% endblock %}
+
+{% block content %}
+<main class="auth-main">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <h1 class="brand-logo">BY <span>Josephine</span></h1>
+      <p class="auth-eyebrow">Bienvenida de vuelta</p>
+    </div>
+
+    <form method="post" action="{% url 'web:login' %}" class="auth-form">
+      {% csrf_token %}
+
+      {% if form.errors %}
+        <div class="auth-alert">Email o contraseña incorrectos.</div>
+      {% endif %}
+
+      <div class="field">
+        <label for="id_email">Correo electrónico</label>
+        <input type="email" name="email" id="id_email" placeholder="hola@ejemplo.com" required>
+      </div>
+
+      <div class="field">
+        <label for="id_password">Contraseña</label>
+        <div class="field-with-icon">
+          <input type="password" name="password" id="id_password" placeholder="••••••••" required>
+          <button type="button" class="toggle-pass" data-target="id_password" aria-label="Mostrar contraseña">👁</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label class="checkbox">
+          <input type="checkbox" name="remember"> <span>Recordarme</span>
+        </label>
+        <a href="{% url 'password_reset' %}" class="link-pink">¿Olvidaste tu contraseña?</a>
+      </div>
+
+      <button type="submit" class="btn-primary">Iniciar sesión →</button>
+
+      <input type="hidden" name="next" value="{{ next }}">
+    </form>
+
+    <div class="divider"><span>o</span></div>
+
+    <p class="auth-footer-text">
+      ¿No tenés cuenta? <a href="{% url 'web:register' %}" class="link-pink">Crear cuenta</a>
+    </p>
+  </div>
+</main>
+{% endblock %}

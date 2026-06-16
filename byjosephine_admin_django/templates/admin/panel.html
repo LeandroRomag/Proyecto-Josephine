@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Panel admin — BY Josephine{% endblock %}
+
+{% block content %}
+<main class="admin-main">
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">Panel de administración</h1>
+
+  <div class="admin-grid">
+    <a href="{% url 'admin_product_new' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">▦</span>
+      <h2>Crear producto</h2>
+      <p>Sumá una nueva prenda al catálogo.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+
+    <a href="{% url 'admin_category_new' %}" class="admin-card">
+      <span class="admin-card-icon" aria-hidden="true">+</span>
+      <h2>Crear categoría</h2>
+      <p>Organizá el catálogo en secciones.</p>
+      <span class="admin-card-cta">Ir →</span>
+    </a>
+  </div>
+</main>
+{% endblock %}

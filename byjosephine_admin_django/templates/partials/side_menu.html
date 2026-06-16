@@ -1,0 +1,76 @@
+{% comment %}
+  Menú lateral deslizante. Incluilo en base.html (o en el header).
+  Se abre con el botón hamburguesa de la izquierda (#menuToggle).
+{% endcomment %}
+
+<button id="menuToggle" class="menu-toggle" aria-label="Abrir menú" aria-controls="sideMenu" aria-expanded="false">
+  <span></span><span></span><span></span>
+</button>
+
+<div id="sideMenuBackdrop" class="side-menu-backdrop" hidden></div>
+
+<aside id="sideMenu" class="side-menu" aria-hidden="true">
+  <div class="side-menu-head">
+    <span class="brand-mini">BY Josephine</span>
+    <button id="menuClose" class="menu-close" aria-label="Cerrar menú">×</button>
+  </div>
+
+  <nav class="side-menu-nav">
+    <a href="{% url 'home' %}">Inicio</a>
+    <a href="{% url 'catalog' %}">Catálogo</a>
+    <a href="{% url 'sales' %}">Ofertas</a>
+    <a href="{% url 'about' %}">Nosotros</a>
+
+    {% if user.is_authenticated and user.is_staff %}
+      <div class="side-menu-section">
+        <p class="side-menu-label">Administración</p>
+        <a href="{% url 'admin_panel' %}">Panel admin</a>
+        <a href="{% url 'web:admin_products_list' %}">Modificar / eliminar producto</a>
+        <a href="{% url 'web:admin_categories_list' %}">Modificar / eliminar categoría</a>
+        <a href="{% url 'web:admin_promotions_list' %}">Modificar / eliminar promoción</a>
+        <a href="{% url 'admin_product_new' %}">Crear producto</a>
+        <a href="{% url 'admin_category_new' %}">Crear categoría</a>
+      </div>
+    {% endif %}
+
+    <div class="side-menu-section">
+      {% if user.is_authenticated %}
+        <a href="{% url 'account' %}">Mi cuenta</a>
+        <form method="post" action="{% url 'logout' %}" class="side-menu-form">
+          {% csrf_token %}
+          <button type="submit" class="link-button">Cerrar sesión</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}">Iniciar sesión</a>
+        <a href="{% url 'register' %}">Crear cuenta</a>
+      {% endif %}
+    </div>
+  </nav>
+</aside>
+
+<script>
+  (function () {
+    var toggle = document.getElementById('menuToggle');
+    var menu = document.getElementById('sideMenu');
+    var backdrop = document.getElementById('sideMenuBackdrop');
+    var close = document.getElementById('menuClose');
+    function open() {
+      menu.classList.add('is-open');
+      backdrop.hidden = false;
+      toggle.setAttribute('aria-expanded', 'true');
+      menu.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function shut() {
+      menu.classList.remove('is-open');
+      backdrop.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      menu.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    if (toggle) toggle.addEventListener('click', open);
+    if (close) close.addEventListener('click', shut);
+    if (backdrop) backdrop.addEventListener('click', shut);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') shut(); });
+  })();
+</script>

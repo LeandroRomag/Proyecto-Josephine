@@ -1,0 +1,359 @@
+--- PAGE 1 ---
+Documento  de  Especificación  de  
+Requisitos
+ 
+1.  Visión  General  del  Proyecto  
+El  sistema  consiste  en  una  plataforma  de  comercio  electrónico  desarrollada  bajo  una  
+arquitectura
+ 
+monolítica
+.
+ 
+El
+ 
+objetivo
+ 
+es
+ 
+proveer
+ 
+una
+ 
+solución
+ 
+centralizada
+ 
+para
+ 
+la
+ 
+venta
+ 
+de
+ 
+indumentaria,
+ 
+con
+ 
+capacidad
+ 
+de
+ 
+escalabilidad
+ 
+horizontal
+ 
+en
+ 
+su
+ 
+catálogo
+ 
+(permitiendo
+ 
+la
+ 
+futura
+ 
+venta
+ 
+de
+ 
+otros
+ 
+rubros)
+ 
+y
+ 
+un
+ 
+enfoque
+ 
+logístico
+ 
+geolocalizado.
+ 
+2.  Perfiles  de  Usuario  y  Funcionalidades  Principales  
+Módulo  /  Perfil  Funcionalidades  Principales  
+Agregados  Sugeridos  
+  
+Administrador  ●  Gestión  de  Catálogo  (CRUD  de  productos).  ●  Gestión  de  Categorías  dinámicas.  ●  Gestión  de  Promociones  y  descuentos.  
+●  Control  de  Inventario:  Gestión  de  stock  automatizada.  ●  Gestión  de  Pedidos:  Control  de  estados  de  envío.  ●  Panel  de  Métricas:  Ventas,  productos  top  y  demás.  ●  Contactó:  número  de  whatsap  que  vaya  directo  al  whatsap  mío  y  hagan  consultas.  
+Usuario  /  Comprador   ●  Registro  y  creación  de  cuenta.  ●  Carrito  de  compras.  ●  Pagos  (Mercado  Pago  y  Efectivo).  ●  Envíos  geolocalizados  
+●  Búsqueda  y  Filtros:  Textual  y  por  atributos.  ●  Historial  de  Pedidos:  Seguimiento  de  compras.  ●  Recuperación  de  
+
+--- PAGE 2 ---
+Módulo  /  Perfil  Funcionalidades  Principales  
+Agregados  Sugeridos  
+  
+(Berisso,  Ensenada,  La  Plata)  o  retiro.  
+contraseña:  Vía  email.  
+3.  Detalle  de  Requerimientos  Específicos  
+3.1.  Logística  y  Envíos  
+El  sistema  logístico  es  uno  de  los  pilares  del  modelo  de  negocio,  requiriendo  validación  estricta  
+para
+ 
+optimizar
+ 
+los
+ 
+tiempos
+ 
+de
+ 
+entrega
+ 
+a
+ 
+nivel
+ 
+local.
+ ●  Zonas  Habilitadas:  El  envío  a  domicilio  cuenta  con  validación  geográfica.  Limitado  
+estrictamente
+ 
+a
+ 
+los
+ 
+polígonos
+ 
+de
+ 
+Berisso,
+ 
+Ensenada
+ 
+y
+ 
+La
+ 
+Plata
+.
+ ●  Integración  de  Mapa:  Uso  de  mapas  interactivos  en  el  proceso  de  checkout  para  que  el  
+usuario
+ 
+ubique
+ 
+su
+ 
+domicilio
+ 
+con
+ 
+precisión.
+ ●  Retiro  en  sucursal:  Opción  de  retiro  en  punto  de  entrega  configurado  por  el  
+administrador
+ 
+(Pick-up).
+ 
+3.2.  Proceso  de  Checkout  (Pago)  
+El  flujo  de  pago  debe  ser  sin  fricciones  y  soportar  múltiples  métodos  adaptados  al  público  
+objetivo.
+ ●  Resumen  del  carrito  con  cálculo  automático  de  totales  y  aplicación  de  promociones  en  
+tiempo
+ 
+real.
+ ●  Métodos  de  pago  integrados:  ○  Pasarela  de  Mercado  Pago  (tarjetas  de  crédito,  débito,  dinero  en  cuenta).  ○  Opción  de  pago  en  efectivo  (al  retirar  o  contra  entrega).  
+4.  Integraciones  de  Terceros  (APIs)  
+Para  cumplir  con  los  requerimientos  técnicos  y  funcionales,  el  monolito  deberá  comunicarse  
+con
+ 
+los
+ 
+siguientes
+ 
+servicios
+ 
+externos:
+ 1.  Mercado  Pago  API:  Para  el  procesamiento  seguro  de  transacciones,  Webhooks  de  
+actualización
+ 
+de
+ 
+pagos
+ 
+y
+ 
+conciliación.
+ 2.  API  de  Mapas  (Google  Maps,  Mapbox  u  OpenStreetMap):  Para  la  geocodificación  
+inversa,
+ 
+renderizado
+ 
+del
+ 
+mapa
+ 
+interactivo
+ 
+en
+ 
+el
+ 
+checkout
+ 
+y
+ 
+validación
+ 
+estricta
+ 
+de
+ 
+las
+ 
+coordenadas
+ 
+dentro
+ 
+de
+ 
+los
+ 
+límites
+ 
+municipales
+ 
+permitidos.
+ 3.  Servicio  de  Correo  (Ej.  SendGrid  /  Resend):  Para  el  envío  de  correos  transaccionales  
+
+--- PAGE 3 ---
+(confirmación  de  registro,  recibos  de  compra,  actualizaciones  de  estado  del  envío  y  
+recuperación
+ 
+de
+ 
+contraseñas).
+ 
+5.  Consideraciones  No  Funcionales  Relevantes  
+●  Seguridad  de  Datos:  Hasheo  de  contraseñas  de  usuarios  en  la  base  de  datos  (Ej.  
+usando
+ 
+bcrypt)
+ 
+y
+ 
+uso
+ 
+obligatorio
+ 
+de
+ 
+certificados
+ 
+SSL
+ 
+(HTTPS)
+ 
+para
+ 
+cifrar
+ 
+los
+ 
+datos
+ 
+sensibles
+ 
+durante
+ 
+la
+ 
+navegación
+ 
+y
+ 
+el
+ 
+checkout.
+ ●  Diseño  Responsivo  (Mobile-first):  La  interfaz  gráfica  (Frontend)  debe  ser  
+completamente
+ 
+funcional
+ 
+y
+ 
+estéticamente
+ 
+adaptable
+ 
+a
+ 
+dispositivos
+ 
+móviles
+ 
+(smartphones
+ 
+y
+ 
+tablets),
+ 
+garantizando
+ 
+una
+ 
+experiencia
+ 
+de
+ 
+usuario
+ 
+óptima
+ 
+independientemente
+ 
+del
+ 
+tamaño
+ 
+de
+ 
+la
+ 
+pantalla.
+ ●  Estructura  Monolítica:  Todo  el  código  backend  (lógica  de  negocio,  acceso  a  datos  y  
+controladores)
+ 
+debe
+ 
+residir
+ 
+en
+ 
+un
+ 
+único
+ 
+repositorio
+ 
+y
+ 
+desplegarse
+ 
+como
+ 
+una
+ 
+sola
+ 
+unidad,
+ 
+facilitando
+ 
+el
+ 
+desarrollo
+ 
+inicial
+ 
+y
+ 
+la
+ 
+administración
+ 
+del
+ 
+servidor.
+ 

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Crear producto — BY Josephine{% endblock %}
+
+{% block content %}
+<main class="admin-main admin-form-main">
+  <a href="{% url 'admin_panel' %}" class="admin-back">← Volver al panel</a>
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">Crear producto</h1>
+
+  {% if saved %}
+    <div class="admin-alert">✓ Producto guardado correctamente.</div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="admin-form">
+    {% csrf_token %}
+
+    <div class="field">
+      <label for="id_name">Nombre del producto</label>
+      <input type="text" id="id_name" name="name" required placeholder="Ej. Top manga larga Olivia">
+    </div>
+
+    <div class="field">
+      <label for="id_category">Categoría</label>
+      <select id="id_category" name="category" required>
+        <option value="">Seleccionar...</option>
+        {% for c in categories %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field-grid-3">
+      <div class="field">
+        <label for="id_price_original">Precio original</label>
+        <input type="number" step="0.01" id="id_price_original" name="price_original" required placeholder="38900">
+      </div>
+      <div class="field">
+        <label for="id_price_final">Precio final</label>
+        <input type="number" step="0.01" id="id_price_final" name="price_final" required placeholder="19450">
+      </div>
+      <div class="field">
+        <label for="id_discount">% descuento</label>
+        <input type="number" id="id_discount" name="discount" placeholder="50">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="id_sizes">Talles (separados por coma)</label>
+      <input type="text" id="id_sizes" name="sizes" placeholder="XS, S, M, L">
+    </div>
+
+    <div class="field">
+      <label for="id_colors">Colores (nombre:#hex, separados por coma)</label>
+      <input type="text" id="id_colors" name="colors" placeholder="Negro:#111, Crema:#efe6d8">
+    </div>
+
+    <div class="field">
+      <label for="id_image">Imagen</label>
+      <input type="file" id="id_image" name="image" accept="image/*">
+    </div>
+
+    <div class="field">
+      <label for="id_description">Descripción</label>
+      <textarea id="id_description" name="description" rows="4" placeholder="Detalles, materiales, calce..."></textarea>
+    </div>
+
+    <label class="checkbox">
+      <input type="checkbox" name="free_shipping" checked>
+      <span>Envío gratis</span>
+    </label>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Guardar producto</button>
+    </div>
+  </form>
+</main>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Crear categoría — BY Josephine{% endblock %}
+
+{% block content %}
+<main class="admin-main admin-form-main">
+  <a href="{% url 'admin_panel' %}" class="admin-back">← Volver al panel</a>
+  <p class="admin-eyebrow">Admin</p>
+  <h1 class="admin-title">Crear categoría</h1>
+
+  {% if saved %}
+    <div class="admin-alert">✓ Categoría guardada correctamente.</div>
+  {% endif %}
+
+  <form method="post" class="admin-form">
+    {% csrf_token %}
+
+    <div class="field">
+      <label for="id_name">Nombre</label>
+      <input type="text" id="id_name" name="name" required placeholder="Ej. Vestidos">
+    </div>
+
+    <div class="field">
+      <label for="id_slug">Slug (URL)</label>
+      <input type="text" id="id_slug" name="slug" required placeholder="vestidos">
+    </div>
+
+    <div class="field">
+      <label for="id_description">Descripción</label>
+      <textarea id="id_description" name="description" rows="4" placeholder="Breve descripción de la categoría..."></textarea>
+    </div>
+
+    <label class="checkbox">
+      <input type="checkbox" name="visible" checked>
+      <span>Visible en el menú</span>
+    </label>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Guardar categoría</button>
+    </div>
+  </form>
+</main>
+
+<script>
+  // Auto-slug a partir del nombre
+  (function () {
+    var name = document.getElementById('id_name');
+    var slug = document.getElementById('id_slug');
+    if (!name || !slug) return;
+    name.addEventListener('input', function () {
+      slug.value = name.value
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    });
+  })();
+</script>
+{% endblock %}

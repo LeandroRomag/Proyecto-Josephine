@@ -1,0 +1,43 @@
+{% load static %}
+<header class="site-header">
+    <div class="marquee">
+        <div class="marquee__track">
+            <span>ENVÍOS GRATIS A TODO EL PAÍS · 3 Y 6 CUOTAS SIN INTERÉS · HASTA 70% OFF · NUEVA COLECCIÓN ·</span>
+            <span>ENVÍOS GRATIS A TODO EL PAÍS · 3 Y 6 CUOTAS SIN INTERÉS · HASTA 70% OFF · NUEVA COLECCIÓN ·</span>
+        </div>
+    </div>
+
+    <div class="header__main container">
+        <button class="icon-btn" aria-label="Menú">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <a href="{% url 'home' %}" class="brand">BY <span>Josephine</span></a>
+
+        <div class="header__actions">
+            <a href="#" class="icon-btn" aria-label="Cuenta">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+            </a>
+            <a href="{% url 'cart' %}" class="icon-btn" aria-label="Carrito">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6h15l-1.5 9H7.5z"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>
+            </a>
+        </div>
+    </div>
+
+    <div class="container header__search">
+        <form action="#" method="get" role="search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" name="q" placeholder="¿Qué estás buscando?">
+        </form>
+    </div>
+
+    <nav class="header__nav container" aria-label="Categorías">
+        <a href="#" class="active">NEW IN</a>
+        <a href="#">Tops / Bodys</a>
+        <a href="#">Vestidos</a>
+        <a href="#">Pantalones / Denim</a>
+        <a href="#">Chalecos</a>
+        <a href="#">Sweaters</a>
+        <a href="#">Accesorios</a>
+    </nav>
+</header>

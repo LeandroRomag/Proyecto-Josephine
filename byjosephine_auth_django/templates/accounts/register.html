@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Crear cuenta — BY Josephine{% endblock %}
+
+{% block content %}
+<main class="auth-main">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <h1 class="brand-logo">BY <span>Josephine</span></h1>
+      <p class="auth-eyebrow">Creá tu cuenta</p>
+    </div>
+
+    <form method="post" action="{% url 'register' %}" class="auth-form">
+      {% csrf_token %}
+
+      {% if form.errors %}
+        <div class="auth-alert">
+          {% for field, errors in form.errors.items %}
+            {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="field-grid-2">
+        <div class="field">
+          <label for="id_first_name">Nombre</label>
+          <input type="text" name="first_name" id="id_first_name" placeholder="María" required>
+        </div>
+        <div class="field">
+          <label for="id_last_name">Apellido</label>
+          <input type="text" name="last_name" id="id_last_name" placeholder="Gómez" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="id_email">Correo electrónico</label>
+        <input type="email" name="email" id="id_email" placeholder="hola@ejemplo.com" required>
+      </div>
+
+      <div class="field">
+        <label for="id_password1">Contraseña</label>
+        <div class="field-with-icon">
+          <input type="password" name="password1" id="id_password1" placeholder="••••••••" required>
+          <button type="button" class="toggle-pass" data-target="id_password1" aria-label="Mostrar contraseña">👁</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="id_password2">Confirmar contraseña</label>
+        <div class="field-with-icon">
+          <input type="password" name="password2" id="id_password2" placeholder="••••••••" required>
+          <button type="button" class="toggle-pass" data-target="id_password2" aria-label="Mostrar contraseña">👁</button>
+        </div>
+      </div>
+
+      <label class="checkbox checkbox-terms">
+        <input type="checkbox" name="agree" required>
+        <span>
+          Acepto los <a href="#" class="link-pink">términos y condiciones</a>
+          y la <a href="#" class="link-pink">política de privacidad</a>.
+        </span>
+      </label>
+
+      <button type="submit" class="btn-primary">Crear cuenta →</button>
+    </form>
+
+    <div class="divider"><span>o</span></div>
+
+    <a href="{% url 'social:begin' 'google-oauth2' %}" class="btn-secondary">
+      <span class="g-icon">G</span> Continuar con Google
+    </a>
+
+    <p class="auth-footer-text">
+      ¿Ya tenés cuenta? <a href="{% url 'login' %}" class="link-pink">Iniciar sesión</a>
+    </p>
+  </div>
+</main>
+
+<script>
+  document.querySelectorAll('.toggle-pass').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  });
+</script>
+{% endblock %}

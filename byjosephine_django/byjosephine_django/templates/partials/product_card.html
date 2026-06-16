@@ -1,0 +1,32 @@
+{% load static %}
+<article class="product-card">
+    <div class="product-card__media">
+        {% if product.discount %}<span class="tag tag--sale">{{ product.discount }}% OFF</span>{% endif %}
+        {% if product.free_shipping %}<span class="tag tag--ship">Envío gratis</span>{% endif %}
+        <img src="{{ product.image }}" alt="{{ product.name }}" loading="lazy">
+    </div>
+    <div class="product-card__body">
+        <p class="product-card__cat">{{ product.category }}</p>
+        <h3 class="product-card__name">{{ product.name }}</h3>
+
+        <div class="product-card__prices">
+            <span class="price-old">${{ product.price_original }}</span>
+            <span class="price-new">${{ product.price_final }}</span>
+        </div>
+        <p class="product-card__cuotas">3 y 6 cuotas sin interés</p>
+
+        <div class="product-card__sizes">
+            {% for size in product.sizes %}
+                <button type="button" class="chip">{{ size }}</button>
+            {% endfor %}
+        </div>
+
+        <div class="product-card__colors">
+            {% for c in product.colors %}
+                <span class="swatch" style="background: {{ c.hex }}" title="{{ c.name }}"></span>
+            {% endfor %}
+        </div>
+
+        <button type="button" class="btn btn--primary btn--block">Agregar al carrito</button>
+    </div>
+</article>

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}BY Josephine — Nueva colección{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero__inner container">
+        <div class="hero__text">
+            <span class="hero__eyebrow">SOLO POR 3 DÍAS</span>
+            <h1>HOT <em>BY Josephine</em></h1>
+            <p class="hero__badges">
+                <span>Hasta 70% OFF</span>
+                <span>+ Envíos gratis</span>
+            </p>
+            <a href="#shop" class="btn btn--dark">Ver colección</a>
+        </div>
+        <div class="hero__media">
+            <img src="{% static 'img/hero-models.jpg' %}" alt="Modelos colección BY Josephine">
+            <span class="hero__sticker">NEW<br>DROP</span>
+        </div>
+    </div>
+</section>
+
+<section id="shop" class="shop container">
+    <header class="shop__head">
+        <h2>Nueva colección</h2>
+        <p>Lo último seleccionado para vos</p>
+    </header>
+
+    <div class="product-grid">
+        {% for product in products %}
+            {% include "partials/product_card.html" with product=product %}
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

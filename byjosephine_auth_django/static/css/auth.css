@@ -1,0 +1,268 @@
+/* ========================================
+   BY Josephine — Auth (login & register)
+   Requiere las variables ya definidas en styles.css:
+   --background, --foreground, --muted, --border,
+   --pink-soft, --pink-deep, --primary, --primary-foreground
+   y las fuentes Playfair Display + Inter.
+   ======================================== */
+
+.auth-main {
+  min-height: calc(100vh - 200px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+  background: var(--background);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 28rem;
+}
+
+/* Brand header */
+.auth-brand {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.brand-logo {
+  font-family: "Playfair Display", serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.15em;
+  font-weight: 500;
+  margin: 0;
+  color: var(--foreground);
+}
+
+.brand-logo span {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.auth-eyebrow {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--muted-foreground, #888);
+  margin-top: 0.5rem;
+}
+
+/* Form */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+  color: var(--foreground);
+}
+
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="password"] {
+  width: 100%;
+  background: color-mix(in oklab, var(--muted) 60%, transparent);
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0.85rem 1.25rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--foreground);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--pink-deep);
+  background: var(--background);
+}
+
+.field-with-icon {
+  position: relative;
+}
+
+.field-with-icon input {
+  padding-right: 3rem;
+}
+
+.toggle-pass {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted-foreground, #888);
+  font-size: 1rem;
+  padding: 0.25rem;
+}
+
+.toggle-pass:hover {
+  color: var(--foreground);
+}
+
+.field-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: var(--muted-foreground, #888);
+}
+
+.checkbox input[type="checkbox"] {
+  accent-color: var(--pink-deep);
+}
+
+.checkbox-terms {
+  align-items: flex-start;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.checkbox-terms input {
+  margin-top: 0.2rem;
+}
+
+.link-pink {
+  color: var(--pink-deep);
+  text-decoration: none;
+}
+
+.link-pink:hover {
+  text-decoration: underline;
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: 9999px;
+  padding: 0.95rem 1.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background: var(--pink-deep);
+}
+
+.btn-secondary {
+  width: 100%;
+  background: var(--card, #fff);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.95rem 1.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+  background: var(--muted);
+}
+
+.g-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4285F4, #EA4335);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.divider span {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted-foreground, #888);
+}
+
+/* Alert */
+.auth-alert {
+  background: color-mix(in oklab, var(--pink-soft) 60%, transparent);
+  border: 1px solid var(--pink-deep);
+  color: var(--foreground);
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* Footer */
+.auth-footer-text {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted-foreground, #888);
+  margin-top: 2rem;
+}
+
+.auth-footer-text .link-pink {
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .field-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .auth-main {
+    padding: 2rem 1rem;
+  }
+}
