@@ -1,4 +1,4 @@
-__pycache__/
+gunicorn__pycache__/
 *.pyc
 node_modules/
 *.zip
