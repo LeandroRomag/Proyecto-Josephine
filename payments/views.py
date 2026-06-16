@@ -71,19 +71,28 @@ class PaymentTransactionViewSet(viewsets.ReadOnlyModelViewSet):
             # 2. Generamos dinámicamente la URL absoluta hacia la home ('web:index')
             inicio_url = request.build_absolute_uri(reverse('web:index'))
 
-            # 3. Armamos la data de la preferencia
-            preference_data = {
-                        "items": [...],
-                        "back_urls": {
-                            "success": inicio_url, # URL absoluta al inicio
-                            "failure": inicio_url,
-                            "pending": inicio_url
-                        },
-                    "auto_return": "all", # Cambia de "approved" a "all"
-                    "external_reference": external_reference,
-}
+            # 3. Forzamos el redondeo a 2 decimales y lo pasamos a float para evitar perder centavos
+            precio_exacto = float(round(order.total, 2))
 
-            # 4. Creamos la preferencia en MP y obtenemos la URL real de pago
+            # 4. Armamos la data de la preferencia
+            preference_data = {
+                "items": [
+                    {
+                        "title": f"Pedido #{order.id} - Josephine",
+                        "quantity": 1,
+                        "unit_price": precio_exacto
+                    }
+                ],
+                "back_urls": {
+                    "success": inicio_url, # URL absoluta al inicio
+                    "failure": inicio_url,
+                    "pending": inicio_url
+                },
+                "auto_return": "all", # Cambia de "approved" a "all"
+                "external_reference": external_reference,
+            }
+
+            # 5. Creamos la preferencia en MP y obtenemos la URL real de pago
             preference_response = sdk.preference().create(preference_data)
             preference = preference_response["response"]
             
