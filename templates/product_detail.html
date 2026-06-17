@@ -31,8 +31,8 @@
 
       <div class="detail-price-row">
         {% if discounted_price %}
-          <span class="old-price">$ {{ original_price }}</span>
-          <strong class="current-price">$ {{ discounted_price }}</strong>
+          <span class="old-price">$ {{ product.price|floatformat:0 }}</span>
+          <strong class="current-price">$ {{ discounted_price|floatformat:0 }}</strong>
           {% if applied_promotion %}
             <span class="promo-tag">
               {% if applied_promotion.discount_type == 'percentage' %}

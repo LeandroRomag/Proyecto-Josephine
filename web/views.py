@@ -366,7 +366,6 @@ def _save_product_colors_and_variants(product, post_data):
         if normalized:
             color_values.append(normalized)
 
-    color_rows = []
     current_rows = []
     for key, value in post_data.items():
         match = re.match(r'^form-(\d+)-(color_hex|size|stock)$', key)
@@ -382,8 +381,11 @@ def _save_product_colors_and_variants(product, post_data):
     product.colors.all().delete()
 
     product_colors = {}
-    for color_value in color_values:
-        product_color = ProductColor.objects.create(product=product, color_hex=color_value)
+    
+    # 🌟 CORRECCIÓN CLAVE: Usamos set() para eliminar duplicados de la lista automáticamente
+    # y usamos get_or_create para que si el color ya se guardó, no intente crearlo de nuevo y dar error.
+    for color_value in set(color_values):
+        product_color, created = ProductColor.objects.get_or_create(product=product, color_hex=color_value)
         product_colors[color_value] = product_color
 
     for item in current_rows:
@@ -398,7 +400,8 @@ def _save_product_colors_and_variants(product, post_data):
 
         product_color = product_colors.get(color_hex)
         if product_color is None:
-            product_color = ProductColor.objects.create(product=product, color_hex=color_hex)
+            # 🌟 También blindamos esta parte con get_or_create
+            product_color, created = ProductColor.objects.get_or_create(product=product, color_hex=color_hex)
             product_colors[color_hex] = product_color
 
         try:
@@ -412,7 +415,6 @@ def _save_product_colors_and_variants(product, post_data):
             size=size_value,
             stock=stock_value,
         )
-
 
 def _resolve_product_variant(product, variant_id):
     if not variant_id:
@@ -586,11 +588,22 @@ def product_detail(request, pk):
         if variant is None:
             form.add_error(None, 'Seleccioná un color y talle válidos.')
         else:
+            cart = _get_cart(request)
             available_stock = get_variant_available_stock(variant)
-            if available_stock < quantity:
-                form.add_error(None, f'Solo quedan {available_stock} unidades disponibles para esta variante.')
+            
+            # 🌟 CORRECCIÓN: Buscamos cuántos tiene ya en el carrito
+            current_cart_qty = 0
+            existing_item = CartItem.objects.filter(cart=cart, product=product, variant=variant).first()
+            if existing_item:
+                current_cart_qty = existing_item.quantity
+
+            # Sumamos lo que pide + lo que ya tiene
+            if available_stock < (quantity + current_cart_qty):
+                if current_cart_qty > 0:
+                    form.add_error(None, f'Solo quedan {available_stock} unidades (ya tenés {current_cart_qty} en el carrito).')
+                else:
+                    form.add_error(None, f'Solo quedan {available_stock} unidades disponibles para esta variante.')
             else:
-                cart = _get_cart(request)
                 with transaction.atomic():
                     cart_item, created = CartItem.objects.select_for_update().get_or_create(
                         cart=cart,
@@ -604,7 +617,7 @@ def product_detail(request, pk):
                 messages.success(request, f'{product.name} agregado al carrito.')
                 return redirect('web:cart')
 
-    # Build gallery image list starting from the cover, then gallery slots, skipping duplicates
+    # Build gallery image list starting from the cover...
     gallery_list = []
     cover = detail_tile.get('image')
     if cover:
@@ -628,7 +641,6 @@ def product_detail(request, pk):
         'detail_tile': detail_tile,
     })
 
-
 def cart_view(request):
     cart = _get_cart(request)
     cart_items = list(cart.items.select_related('product', 'variant__color').prefetch_related('product__gallery_images').all())
@@ -638,6 +650,23 @@ def cart_view(request):
 
     subtotal = cart.get_total()
     applied_promotion, discount_amount, discounted_total = _select_applicable_promotion(cart_items, subtotal)
+
+    # 🌟 CORRECCIÓN: Calculamos el precio original y el descuento por cada ítem individual
+    for item in cart_items:
+        item.original_price = item.product.price
+        item.discounted_price = None
+        
+        if applied_promotion and _promotion_matches_product(applied_promotion, item.product):
+            price = Decimal(item.product.price)
+            if applied_promotion.discount_type == 'percentage':
+                discount = (price * applied_promotion.discount_value) / Decimal('100')
+                if applied_promotion.max_discount_amount:
+                    discount = min(discount, applied_promotion.max_discount_amount)
+            else:
+                discount = applied_promotion.discount_value
+                
+            final_price = (price - discount).quantize(Decimal('0.01'))
+            item.discounted_price = final_price if final_price >= Decimal('0') else Decimal('0.00')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -662,7 +691,7 @@ def cart_view(request):
                 else:
                     if available_stock <= 0:
                         item.delete()
-                        messages.error(request, f'{item.product.name} ya no tiene stock disponible y fue quitado del carrito.')
+                        messages.error(request, f'{item.product.name} ya no tiene stock disponible y fue quitado.')
                         return redirect('web:cart')
 
                     if quantity > available_stock:
@@ -701,7 +730,6 @@ def cart_view(request):
         'applied_promotion': applied_promotion,
         'shipping_zones': ShippingZone.objects.filter(is_active=True).order_by('name'),
     })
-
 
 def _create_product_reservation(request, cart_items, reservation_minutes=15):
     """
