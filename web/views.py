@@ -1436,15 +1436,23 @@ def admin_product_new(request):
     formset = VariantFormSet(request.POST or None)
     selected_category_ids = request.POST.getlist('categories') if request.method == 'POST' else []
 
+    # 1. ESTA ES LA CORRECCIÓN CLAVE: Recuperamos colores y talles bien arriba.
+    # Así, si hay un error, la página recarga pero mantiene todo lo que escribiste.
+    if request.method == 'POST':
+        color_rows = _build_product_color_rows_from_post(request.POST)
+    else:
+        color_rows = _default_product_color_rows()
+
     if request.method == 'POST' and form.is_valid():
         promotion_id = request.POST.get('promotion') or None
 
-        # Additional validations: at least one category, name and price provided, and at least one color+size with stock
+        # Additional validations
         selected_categories = request.POST.getlist('categories')
-        color_rows_post = _build_product_color_rows_from_post(request.POST)
+        
+        # 2. CORRECCIÓN DEL STOCK 0: Cambiamos > 0 por >= 0
         has_valid_variant = any(
             any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) >= 0 for sr in row.get('size_rows', []))
-            for row in color_rows_post
+            for row in color_rows
         )
         name_val = form.cleaned_data.get('name')
         price_val = form.cleaned_data.get('price')
@@ -1456,7 +1464,7 @@ def admin_product_new(request):
         if price_val is None:
             form.add_error('price', 'El precio es obligatorio.')
         if not has_valid_variant:
-            form.add_error(None, 'Debés crear al menos un color con talle y stock.')
+            form.add_error(None, 'Debés crear al menos un color con talle (el stock puede ser 0).')
 
         if form.errors:
             messages.error(request, 'Corrige los errores antes de guardar el producto.')
@@ -1478,10 +1486,9 @@ def admin_product_new(request):
             saved = True
             form = ProductAdminForm(instance=product)
             color_rows = _build_product_color_rows_from_product(product)
-    else:
-        color_rows = _default_product_color_rows()
-        if request.method == 'POST':
-            messages.error(request, 'Completá nombre y precio válidos.')
+            
+    elif request.method == 'POST':
+        messages.error(request, 'Completá nombre y precio válidos.')
 
     return render(request, 'admin/product_new.html', {
         'categories': Category.objects.order_by('name'),
