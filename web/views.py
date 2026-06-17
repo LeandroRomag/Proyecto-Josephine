@@ -1443,7 +1443,7 @@ def admin_product_new(request):
         selected_categories = request.POST.getlist('categories')
         color_rows_post = _build_product_color_rows_from_post(request.POST)
         has_valid_variant = any(
-            any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) > 0 for sr in row.get('size_rows', []))
+            any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) >= 0 for sr in row.get('size_rows', []))
             for row in color_rows_post
         )
         name_val = form.cleaned_data.get('name')
@@ -1527,7 +1527,7 @@ def admin_product_edit(request, pk):
 
         selected_categories = request.POST.getlist('categories')
         has_valid_variant = any(
-            any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) > 0 for sr in row.get('size_rows', []))
+            any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) >= 0 for sr in row.get('size_rows', []))
             for row in color_rows
         )
         name_val = form.cleaned_data.get('name')
