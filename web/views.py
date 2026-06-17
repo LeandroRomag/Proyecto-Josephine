@@ -1429,6 +1429,85 @@ def _admin_product_form_context(request, product=None, saved=False):
 
 
 @staff_member_required
+def admin_product_new(request):
+    saved = False
+    form = ProductAdminForm(request.POST or None, request.FILES or None)
+    VariantFormSet = inlineformset_factory(Product, ProductVariant, form=ProductVariantForm, extra=2, can_delete=True)
+    formset = VariantFormSet(request.POST or None)
+    selected_category_ids = request.POST.getlist('categories') if request.method == 'POST' else []
+
+    if request.method == 'POST' and form.is_valid():
+        promotion_id = request.POST.get('promotion') or None
+
+        # Additional validations: at least one category, name and price provided, and at least one color+size with stock
+        selected_categories = request.POST.getlist('categories')
+        color_rows_post = _build_product_color_rows_from_post(request.POST)
+        has_valid_variant = any(
+            any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) > 0 for sr in row.get('size_rows', []))
+            for row in color_rows_post
+        )
+        name_val = form.cleaned_data.get('name')
+        price_val = form.cleaned_data.get('price')
+
+        if not selected_categories:
+            form.add_error('categories', 'Seleccioná al menos una categoría.')
+        if not name_val:
+            form.add_error('name', 'El nombre es obligatorio.')
+        if price_val is None:
+            form.add_error('price', 'El precio es obligatorio.')
+        if not has_valid_variant:
+            form.add_error(None, 'Debés crear al menos un color con talle y stock.')
+
+        if form.errors:
+            messages.error(request, 'Corrige los errores antes de guardar el producto.')
+        else:
+            with transaction.atomic():
+                product = form.save(commit=False)
+                product.is_deleted = False
+                product.save()
+                form.save_m2m()
+                _save_product_gallery_images(product, request.FILES, request.POST)
+                _save_product_colors_and_variants(product, request.POST)
+
+                if promotion_id:
+                    promotion = Promotion.all_objects.filter(id=promotion_id, is_deleted=False).first()
+                    if promotion:
+                        promotion.products.add(product)
+
+            messages.success(request, f'Producto {product.name} creado correctamente.')
+            saved = True
+            form = ProductAdminForm(instance=product)
+            color_rows = _build_product_color_rows_from_product(product)
+    else:
+        color_rows = _default_product_color_rows()
+        if request.method == 'POST':
+            messages.error(request, 'Completá nombre y precio válidos.')
+
+    return render(request, 'admin/product_new.html', {
+        'categories': Category.objects.order_by('name'),
+        'promotions': Promotion.objects.filter(is_deleted=False).order_by('-start_date', '-id'),
+        'selected_promotion_id': '',
+        'gallery_slot_1': {'field': form['gallery_image_1'], 'existing_url': ''},
+        'gallery_slot_2': {'field': form['gallery_image_2'], 'existing_url': ''},
+        'gallery_slot_3': {'field': form['gallery_image_3'], 'existing_url': ''},
+        'gallery_slot_4': {'field': form['gallery_image_4'], 'existing_url': ''},
+        'gallery_slot_5': {'field': form['gallery_image_5'], 'existing_url': ''},
+        'gallery_slot_6': {'field': form['gallery_image_6'], 'existing_url': ''},
+        'gallery_slot_7': {'field': form['gallery_image_7'], 'existing_url': ''},
+        'gallery_slot_8': {'field': form['gallery_image_8'], 'existing_url': ''},
+        'gallery_slot_9': {'field': form['gallery_image_9'], 'existing_url': ''},
+        'gallery_slot_10': {'field': form['gallery_image_10'], 'existing_url': ''},
+        'form': form,
+        'formset': formset,
+        'color_rows': color_rows,
+        'selected_category_ids': [str(item) for item in selected_category_ids],
+        'saved': saved,
+        'edit_mode': False,
+        'product': None,
+    })
+
+
+@staff_member_required
 def admin_product_edit(request, pk):
     product = get_object_or_404(Product.all_objects.prefetch_related('categories', 'colors__variants'), pk=pk)
     saved = False
@@ -1520,97 +1599,6 @@ def admin_product_edit(request, pk):
         'edit_mode': True,
         'product': product,
     })
-
-@staff_member_required
-def admin_product_edit(request, pk):
-    product = get_object_or_404(Product.all_objects.prefetch_related('categories', 'colors__variants'), pk=pk)
-    saved = False
-    form = ProductAdminForm(request.POST or None, request.FILES or None, instance=product)
-    VariantFormSet = inlineformset_factory(Product, ProductVariant, form=ProductVariantForm, extra=2, can_delete=True)
-    formset = VariantFormSet(request.POST or None, instance=product)
-    selected_category_ids = request.POST.getlist('categories') if request.method == 'POST' else [str(item) for item in product.categories.values_list('id', flat=True)]
-
-    if request.method == 'POST' and form.is_valid():
-        promotion_id = request.POST.get('promotion') or None
-
-        # Additional validations as in creation
-        selected_categories = request.POST.getlist('categories')
-        color_rows_post = _build_product_color_rows_from_post(request.POST)
-        has_valid_variant = any(
-            any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) > 0 for sr in row.get('size_rows', []))
-            for row in color_rows_post
-        )
-        name_val = form.cleaned_data.get('name')
-        price_val = form.cleaned_data.get('price')
-
-        if not selected_categories:
-            form.add_error('categories', 'Seleccioná al menos una categoría.')
-        if not name_val:
-            form.add_error('name', 'El nombre es obligatorio.')
-        if price_val is None:
-            form.add_error('price', 'El precio es obligatorio.')
-        if not has_valid_variant:
-            form.add_error(None, 'Debés crear al menos un color con talle y stock.')
-
-        if form.errors:
-            messages.error(request, 'Corrige los errores antes de guardar el producto.')
-        else:
-            with transaction.atomic():
-                product = form.save(commit=False)
-                product.is_deleted = False
-                product.save()
-                form.save_m2m()
-                _save_product_gallery_images(product, request.FILES, request.POST)
-                _save_product_colors_and_variants(product, request.POST)
-
-                current_promotions = list(Promotion.all_objects.filter(products=product, is_deleted=False))
-                if promotion_id:
-                    promotion = Promotion.all_objects.filter(id=promotion_id, is_deleted=False).first()
-                    if promotion:
-                        for current_promotion in current_promotions:
-                            if current_promotion.id != promotion.id:
-                                current_promotion.products.remove(product)
-                        promotion.products.add(product)
-                else:
-                    for current_promotion in current_promotions:
-                        current_promotion.products.remove(product)
-
-            messages.success(request, f'Producto {product.name} actualizado correctamente.')
-            saved = True
-            color_rows = _build_product_color_rows_from_product(product)
-    else:
-        color_rows = _build_product_color_rows_from_product(product)
-        if request.method == 'POST':
-            messages.error(request, 'Completá nombre y precio válidos.')
-
-    return render(request, 'admin/product_new.html', {
-        'categories': Category.objects.order_by('name'),
-        'promotions': Promotion.objects.filter(is_deleted=False).order_by('-start_date', '-id'),
-        'selected_promotion_id': (
-            Promotion.all_objects.filter(products=product, is_deleted=False)
-            .order_by('-start_date', '-id')
-            .values_list('id', flat=True)
-            .first() or ''
-        ),
-        'gallery_slot_1': {'field': form['gallery_image_1'], 'existing_url': _build_product_gallery_slots_from_product(product)[0]['existing_url']},
-        'gallery_slot_2': {'field': form['gallery_image_2'], 'existing_url': _build_product_gallery_slots_from_product(product)[1]['existing_url']},
-        'gallery_slot_3': {'field': form['gallery_image_3'], 'existing_url': _build_product_gallery_slots_from_product(product)[2]['existing_url']},
-        'gallery_slot_4': {'field': form['gallery_image_4'], 'existing_url': _build_product_gallery_slots_from_product(product)[3]['existing_url']},
-        'gallery_slot_5': {'field': form['gallery_image_5'], 'existing_url': _build_product_gallery_slots_from_product(product)[4]['existing_url']},
-        'gallery_slot_6': {'field': form['gallery_image_6'], 'existing_url': _build_product_gallery_slots_from_product(product)[5]['existing_url']},
-        'gallery_slot_7': {'field': form['gallery_image_7'], 'existing_url': _build_product_gallery_slots_from_product(product)[6]['existing_url']},
-        'gallery_slot_8': {'field': form['gallery_image_8'], 'existing_url': _build_product_gallery_slots_from_product(product)[7]['existing_url']},
-        'gallery_slot_9': {'field': form['gallery_image_9'], 'existing_url': _build_product_gallery_slots_from_product(product)[8]['existing_url']},
-        'gallery_slot_10': {'field': form['gallery_image_10'], 'existing_url': _build_product_gallery_slots_from_product(product)[9]['existing_url']},
-        'form': form,
-        'formset': formset,
-        'color_rows': color_rows,
-        'selected_category_ids': [str(item) for item in selected_category_ids],
-        'saved': saved,
-        'edit_mode': True,
-        'product': product,
-    })
-
 
 @staff_member_required
 def admin_product_delete(request, pk):
