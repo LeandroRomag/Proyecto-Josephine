@@ -207,5 +207,5 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://proyecto-josephine-production.up.railway.app',
+    'https://by-josephine.up.railway.app',
 ]
