@@ -70,7 +70,7 @@ FALLBACK_IMAGES = [
 
 
 HEX_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
-ITEMS_PER_PAGE = 10
+ITEMS_PER_PAGE = 12
 
 
 def _validation_error_text(exc):
