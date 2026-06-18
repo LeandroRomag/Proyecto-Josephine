@@ -433,32 +433,51 @@ def _resolve_shipping_zone_for_point(latitude, longitude):
 
 def _select_applicable_promotion(cart_items, subtotal, promo_code=None):
     promo_code = (promo_code or '').strip().upper()
+    
+    # Función interna para calcular el descuento solo sobre los items válidos
+    def calc_discount(promo, ignore_targets=False):
+        applicable_subtotal = Decimal('0.00')
+        for item in cart_items:
+            if ignore_targets or _promotion_matches_product(promo, item.product):
+                applicable_subtotal += item.product.price * item.quantity
+        
+        if applicable_subtotal <= 0:
+            return Decimal('0.00')
+            
+        if promo.discount_type == 'percentage':
+            disc = (applicable_subtotal * promo.discount_value) / Decimal('100')
+            if promo.max_discount_amount:
+                disc = min(disc, promo.max_discount_amount)
+            return disc.quantize(Decimal('0.01'))
+        else:
+            disc = promo.discount_value
+            return min(disc, applicable_subtotal).quantize(Decimal('0.01'))
+
     if promo_code:
         promotion = Promotion.objects.filter(code__iexact=promo_code, is_deleted=False).first()
         if promotion and promotion.is_valid():
-            # Promo codes are global by design: they can apply to any cart.
-            discount, total = promotion.apply_discount(subtotal, cart_items, ignore_targets=True)
+            discount = calc_discount(promotion, ignore_targets=True)
             if discount > 0:
-                return promotion, discount, total
+                return promotion, discount, subtotal - discount
         return None, Decimal('0.00'), subtotal
 
     best_promotion = None
     best_discount = Decimal('0.00')
     best_total = subtotal
+    
     for promotion in Promotion.objects.filter(is_active=True, is_deleted=False).filter(Q(code__isnull=True) | Q(code='')):
         if not promotion.is_valid():
             continue
-        # Only consider automatic promotions that actually apply to the current cart.
         if not _promotion_matches_cart_items(promotion, cart_items):
             continue
-        discount, total = promotion.apply_discount(subtotal, cart_items)
+            
+        discount = calc_discount(promotion)
         if discount > best_discount:
             best_promotion = promotion
             best_discount = discount
-            best_total = total
+            best_total = subtotal - discount
 
     return best_promotion, best_discount, best_total
-
 
 def _shipping_zone_map_payload():
     center_map = {
@@ -651,22 +670,20 @@ def cart_view(request):
     subtotal = cart.get_total()
     applied_promotion, discount_amount, discounted_total = _select_applicable_promotion(cart_items, subtotal)
 
-    # 🌟 CORRECCIÓN: Calculamos el precio original y el descuento por cada ítem individual
     for item in cart_items:
         item.original_price = item.product.price
         item.discounted_price = None
         
+        # Solo calculamos el precio tachado individual si ESTE producto entra en la promo
         if applied_promotion and _promotion_matches_product(applied_promotion, item.product):
             price = Decimal(item.product.price)
             if applied_promotion.discount_type == 'percentage':
-                discount = (price * applied_promotion.discount_value) / Decimal('100')
-                if applied_promotion.max_discount_amount:
-                    discount = min(discount, applied_promotion.max_discount_amount)
+                disc = (price * applied_promotion.discount_value) / Decimal('100')
+                item.discounted_price = (price - disc).quantize(Decimal('0.01'))
             else:
-                discount = applied_promotion.discount_value
-                
-            final_price = (price - discount).quantize(Decimal('0.01'))
-            item.discounted_price = final_price if final_price >= Decimal('0') else Decimal('0.00')
+                disc = applied_promotion.discount_value
+                final_price = (price - disc).quantize(Decimal('0.01'))
+                item.discounted_price = final_price if final_price >= Decimal('0') else Decimal('0.00')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -691,7 +708,7 @@ def cart_view(request):
                 else:
                     if available_stock <= 0:
                         item.delete()
-                        messages.error(request, f'{item.product.name} ya no tiene stock disponible y fue quitado.')
+                        messages.error(request, f'{item.product.name} ya no tiene stock disponible y fue quitado del carrito.')
                         return redirect('web:cart')
 
                     if quantity > available_stock:
@@ -730,7 +747,7 @@ def cart_view(request):
         'applied_promotion': applied_promotion,
         'shipping_zones': ShippingZone.objects.filter(is_active=True).order_by('name'),
     })
-
+    
 def _create_product_reservation(request, cart_items, reservation_minutes=15):
     """
     Create or update temporary reservation for all cart items to prevent race conditions.
