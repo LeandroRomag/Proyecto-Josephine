@@ -44,18 +44,7 @@
     </section>
     {% endif %}
 
-<section id="shop" class="shop container">
-    <header class="shop__head">
-        <h2>Nueva colección</h2>
-        <p>Lo último seleccionado para vos</p>
-    </header>
-
-    <div class="product-grid">
-        {% for tile in product_tiles %}
-            {% include "partials/product_card.html" with tile=tile %}
-        {% endfor %}
-    </div>
-
+ 
     {% include "partials/pagination.html" %}
 </section>
 

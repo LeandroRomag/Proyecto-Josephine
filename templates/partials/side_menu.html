@@ -17,7 +17,7 @@
 
   <nav class="side-menu-nav">
     <a href="{% url 'web:index' %}">Inicio</a>
-    <a href="{% url 'web:catalog' %}">Catálogo</a>
+    <a href="{% url 'web:catalog' %}">Productos</a>
     <a href="{% url 'web:order_lookup' %}">Consultar pedidos</a>
 
     {% if user.is_authenticated and user.is_staff %}
