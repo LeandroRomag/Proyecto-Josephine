@@ -159,6 +159,7 @@ class CheckoutForm(forms.Form):
     customer_name = forms.CharField(max_length=200, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nombre y apellido'}))
     customer_email = forms.EmailField(max_length=255, widget=forms.EmailInput(attrs={'class': 'form-input', 'placeholder': 'Correo electrónico'}))
     phone = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Teléfono'}))
+    
     delivery_method = forms.ChoiceField(
         choices=(
             ('shipping', 'Envío a domicilio'),
@@ -166,11 +167,13 @@ class CheckoutForm(forms.Form):
         widget=forms.RadioSelect,
         initial='shipping',
     )
+    
     province = forms.ChoiceField(
         choices=[('', 'Seleccioná una provincia')] + ARGENTINA_PROVINCES,
         required=True,
         widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_province'}),
     )
+    
     city = forms.CharField(
         max_length=120,
         required=True,
@@ -179,62 +182,52 @@ class CheckoutForm(forms.Form):
             'id': 'id_city',
         }),
     )
+    
     shipping_zone = forms.ModelChoiceField(
         queryset=ShippingZone.objects.filter(is_active=True),
         empty_label='Seleccionar zona',
         required=False,
     )
+    
     pickup_point = forms.ModelChoiceField(
         queryset=PickupPoint.objects.filter(is_active=True),
         empty_label='Seleccionar punto de retiro',
         required=False,
     )
+    
     address = forms.CharField(
         max_length=500,
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Dirección completa'}),
+        required=False, # Lo dejamos en False acá para controlarlo en la función clean()
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Dirección (Calle, número, piso)'}),
     )
+    
     latitude = forms.FloatField(required=False, widget=forms.HiddenInput())
     longitude = forms.FloatField(required=False, widget=forms.HiddenInput())
+    
     promo_code = forms.CharField(
         max_length=50,
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Código promo'}),
     )
+    
     payment_method = forms.ChoiceField(
         choices=(
             ('mercado_pago', 'Mercado Pago'),
         )
     )
 
+    # 👇 ESTA ES LA FUNCIÓN CLAVE QUE EVITA EL ERROR DEL MAPA 👇
     def clean(self):
         cleaned_data = super().clean()
         delivery_method = cleaned_data.get('delivery_method')
-        address = (cleaned_data.get('address') or '').strip()
-        province = (cleaned_data.get('province') or '').strip()
-        city = (cleaned_data.get('city') or '').strip()
-        latitude = cleaned_data.get('latitude')
-        longitude = cleaned_data.get('longitude')
-        promo_code = (cleaned_data.get('promo_code') or '').strip().upper()
 
         if delivery_method == 'shipping':
-            if not province:
-                self.add_error('province', 'Seleccioná una provincia.')
-            if not city:
-                self.add_error('city', 'Seleccioná una ciudad.')
-            if not address:
-                self.add_error('address', 'La dirección es requerida para envío.')
-            if latitude is None or longitude is None:
-                self.add_error(None, 'Seleccioná un punto en el mapa para continuar.')
-
-        if promo_code:
-            promotion = Promotion.objects.filter(code__iexact=promo_code, is_deleted=False).first()
-            if promotion is None:
-                self.add_error('promo_code', 'El código promocional no existe o no está activo.')
-            else:
-                cleaned_data['promotion'] = promotion
-                cleaned_data['promo_code'] = promo_code
-        else:
-            cleaned_data['promotion'] = None
-
+            province = cleaned_data.get('province')
+            city = cleaned_data.get('city')
+            address = cleaned_data.get('address')
+            
+            # Si eligió envío a domicilio, validamos que la dirección esté completa
+            if not province or not city or not address:
+                raise forms.ValidationError("Por favor completá tu provincia, ciudad y dirección exacta para el envío.")
+                
         return cleaned_data

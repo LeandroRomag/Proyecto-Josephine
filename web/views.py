@@ -382,8 +382,6 @@ def _save_product_colors_and_variants(product, post_data):
 
     product_colors = {}
     
-    # 🌟 CORRECCIÓN CLAVE: Usamos set() para eliminar duplicados de la lista automáticamente
-    # y usamos get_or_create para que si el color ya se guardó, no intente crearlo de nuevo y dar error.
     for color_value in set(color_values):
         product_color, created = ProductColor.objects.get_or_create(product=product, color_hex=color_value)
         product_colors[color_value] = product_color
@@ -400,7 +398,6 @@ def _save_product_colors_and_variants(product, post_data):
 
         product_color = product_colors.get(color_hex)
         if product_color is None:
-            # 🌟 También blindamos esta parte con get_or_create
             product_color, created = ProductColor.objects.get_or_create(product=product, color_hex=color_hex)
             product_colors[color_hex] = product_color
 
@@ -539,18 +536,13 @@ def _create_mercado_pago_preference(order, payment_transaction):
 
 
 def index(request):
-    # Tu lógica actual que trae los productos para la home...
     products = Product.objects.prefetch_related('categories', 'colors__variants', 'variants', 'gallery_images').filter(is_deleted=False).order_by('-id')[:8]
     
-    # 🌟 PASO A: AGREGÁ ESTA LÍNEA AQUÍ (Trae los lanzamientos activos)
     drops = Drop.objects.filter(is_active=True).order_by('-id')
 
     return render(request, 'home.html', {
         'products': products,
         'product_tiles': _build_product_tiles(products),
-        # ... cualquier otra variable que ya tengas en tu contexto ...
-        
-        # 🌟 PASO B: SUMÁ ESTA LÍNEA AL CONTEXTO
         'drops': drops,
     })
 
@@ -558,7 +550,6 @@ def catalog(request):
     search_form = SiteSearchForm(request.GET or None)
     products = Product.objects.prefetch_related('categories', 'colors__variants', 'variants', 'gallery_images').order_by('-id')
     
-    # 🌟 1. Atrapamos ambos parámetros
     category_id = request.GET.get('category')
     drop_id = request.GET.get('drop')
 
@@ -572,7 +563,6 @@ def catalog(request):
     if category_id and str(category_id).isdigit():
         products = products.filter(categories__id=category_id).distinct()
         
-    # 🌟 2. Aplicamos el filtro del Drop si el usuario seleccionó uno
     if drop_id and str(drop_id).isdigit():
         products = products.filter(drop_id=drop_id).distinct()
 
@@ -582,9 +572,9 @@ def catalog(request):
     return render(request, 'catalog.html', {
         'search_form': search_form,
         'category_id': category_id or '',
-        'drop_id': drop_id or '', # 🌟 3. Lo pasamos al contexto para que el select mantenga la opción elegida
+        'drop_id': drop_id or '',
         'categories': Category.objects.all().order_by('name'),
-        'drops': Drop.objects.filter(is_active=True).order_by('-id'), # 🌟 4. Mandamos los drops activos al HTML
+        'drops': Drop.objects.filter(is_active=True).order_by('-id'),
         'products': page_products,
         'product_tiles': _build_product_tiles(page_products),
         'page_obj': page_obj,
@@ -610,13 +600,11 @@ def product_detail(request, pk):
             cart = _get_cart(request)
             available_stock = get_variant_available_stock(variant)
             
-            # 🌟 CORRECCIÓN: Buscamos cuántos tiene ya en el carrito
             current_cart_qty = 0
             existing_item = CartItem.objects.filter(cart=cart, product=product, variant=variant).first()
             if existing_item:
                 current_cart_qty = existing_item.quantity
 
-            # Sumamos lo que pide + lo que ya tiene
             if available_stock < (quantity + current_cart_qty):
                 if current_cart_qty > 0:
                     form.add_error(None, f'Solo quedan {available_stock} unidades (ya tenés {current_cart_qty} en el carrito).')
@@ -636,7 +624,6 @@ def product_detail(request, pk):
                 messages.success(request, f'{product.name} agregado al carrito.')
                 return redirect('web:cart')
 
-    # Build gallery image list starting from the cover...
     gallery_list = []
     cover = detail_tile.get('image')
     if cover:
@@ -674,7 +661,6 @@ def cart_view(request):
         item.original_price = item.product.price
         item.discounted_price = None
         
-        # Solo calculamos el precio tachado individual si ESTE producto entra en la promo
         if applied_promotion and _promotion_matches_product(applied_promotion, item.product):
             price = Decimal(item.product.price)
             if applied_promotion.discount_type == 'percentage':
@@ -749,10 +735,6 @@ def cart_view(request):
     })
     
 def _create_product_reservation(request, cart_items, reservation_minutes=15):
-    """
-    Create or update temporary reservation for all cart items to prevent race conditions.
-    Returns reservation_data dict with expiration time.
-    """
     from orders.models import ProductReservation
     
     now = timezone.now()
@@ -769,7 +751,6 @@ def _create_product_reservation(request, cart_items, reservation_minutes=15):
                 if not variant:
                     raise ValidationError(f'{item.product.name} no tiene variante válida.')
                 
-                # Lock the variant to check stock
                 locked = ProductVariant.objects.select_for_update().get(id=variant.id)
                 available = get_variant_available_stock(
                     locked,
@@ -782,7 +763,6 @@ def _create_product_reservation(request, cart_items, reservation_minutes=15):
                         f'Stock insuficiente para {item.product.name}. Solo quedan {available} unidades disponibles.'
                     )
                 
-                # Get or create reservation (avoid duplicates by updating existing)
                 res, created = ProductReservation.objects.get_or_create(
                     variant=variant,
                     user=user,
@@ -794,11 +774,10 @@ def _create_product_reservation(request, cart_items, reservation_minutes=15):
                     }
                 )
                 
-                # If reservation exists, update expiration time and keep quantity
                 if not created:
                     res.expires_at = expires_at
                     res.is_active = True
-                    res.quantity = item.quantity  # Update quantity from current cart
+                    res.quantity = item.quantity
                     res.save()
                 
                 reservations.append(res)
@@ -813,9 +792,6 @@ def _create_product_reservation(request, cart_items, reservation_minutes=15):
 
 
 def _verify_reservations_valid(request, cart_items):
-    """
-    Check if all cart items still have valid reservations.
-    """
     from orders.models import ProductReservation
     
     now = timezone.now()
@@ -843,9 +819,6 @@ def _verify_reservations_valid(request, cart_items):
 
 
 def _consume_reservations(request, cart_items):
-    """
-    Mark reservations as consumed and reduce stock.
-    """
     from orders.models import ProductReservation
     
     user = request.user if request.user.is_authenticated else None
@@ -858,7 +831,6 @@ def _consume_reservations(request, cart_items):
                 if not variant:
                     raise ValidationError(f'{item.product.name} no tiene variante válida.')
                 
-                # Deactivate reservation and reduce stock
                 res = ProductReservation.objects.select_for_update().get(
                     variant=variant,
                     quantity=item.quantity,
@@ -879,12 +851,6 @@ def _consume_reservations(request, cart_items):
 
 
 def checkout_view(request):
-    """
-    Two-step checkout with concurrency control:
-    Step 1 (GET): Show choice - Retiro o Envío
-    Step 2 (GET with step=form): Show delivery form with optional map
-    Both steps use reservations to prevent race conditions
-    """
     from orders.models import ProductReservation
     
     cart = _get_cart(request)
@@ -905,12 +871,9 @@ def checkout_view(request):
     
     step = request.GET.get('step', 'delivery-choice')
     
-    # STEP 1: Delivery choice (Retiro or Envío)
     if step == 'delivery-choice':
-        # Try to create/verify reservations
         valid, error = _verify_reservations_valid(request, cart_items)
         
-        # If no valid reservations exist, create new ones
         if not valid:
             res_data = _create_product_reservation(request, cart_items)
             if not res_data['success']:
@@ -918,20 +881,16 @@ def checkout_view(request):
                 return redirect('web:cart')
             request.session['_checkout_reservations_active'] = True
             request.session['_checkout_expires_at'] = res_data['expires_at']
-            request.session.set_expiry(int(15 * 60))  # 15 minute session
+            request.session.set_expiry(int(15 * 60))
         else:
-            # Reservations still valid, refresh the session expiry
             request.session.set_expiry(int(15 * 60))
         
         return redirect(f"{reverse('web:checkout')}?step=form&method=shipping")
     
-    # STEP 2: Delivery form (choice already made)
     elif step == 'form':
-        # Verify reservations still valid
         valid, error = _verify_reservations_valid(request, cart_items)
         if not valid:
             messages.warning(request, 'El tiempo de compra ha expirado. Por favor, intenta de nuevo. Tu carrito se mantiene intacto.')
-            # Clean up session flags to allow retry
             request.session['_checkout_reservations_active'] = False
             ProductReservation.objects.filter(
                 user=request.user,
@@ -954,7 +913,6 @@ def checkout_view(request):
         )
         
         if request.method == 'POST' and form.is_valid():
-            # Final validation and order creation
             valid, error = _verify_reservations_valid(request, cart_items)
             if not valid:
                 messages.warning(request, 'El tiempo de compra ha expirado. Por favor, intenta de nuevo. Tu carrito se mantiene intacto.')
@@ -984,16 +942,21 @@ def checkout_view(request):
 
             try:
                 with transaction.atomic():
-                    # Create order
+                    # 🌟 ACÁ APLICAMOS LA CORRECCIÓN: SE GUARDAN PROVINCIA Y CIUDAD
                     order = Order.objects.create(
                         user=owner_user,
                         customer_name=form.cleaned_data['customer_name'],
                         customer_email=form.cleaned_data['customer_email'],
                         phone=form.cleaned_data['phone'],
                         delivery_method=delivery_method,
+                        
+                        delivery_province=province,
+                        delivery_city=city,
                         delivery_address=form.cleaned_data.get('address', ''),
+                        
                         delivery_latitude=form.cleaned_data.get('latitude'),
                         delivery_longitude=form.cleaned_data.get('longitude'),
+                        
                         shipping_zone=shipping_zone,
                         pickup_point=None,
                         promotion=promotion,
@@ -1011,7 +974,6 @@ def checkout_view(request):
                         ),
                     )
                     
-                    # Create order items
                     for item in cart_items:
                         variant = item.variant or item.product.variants.first()
                         OrderItem.objects.create(
@@ -1023,7 +985,6 @@ def checkout_view(request):
                             unit_price=item.product.price,
                         )
                     
-                    # Create payment transaction
                     payment_method = form.cleaned_data['payment_method']
                     payment = PaymentTransaction.objects.create(
                         user=owner_user,
@@ -1051,7 +1012,6 @@ def checkout_view(request):
                         },
                     )
                     
-                    # Handle Mercado Pago payment
                     if payment_method == 'mercado_pago':
                         checkout_url = _create_mercado_pago_preference(order, payment)
                         payment.checkout_url = checkout_url
@@ -1059,8 +1019,6 @@ def checkout_view(request):
 
                         request.session['_pending_checkout_order_id'] = order.id
                         request.session['_pending_checkout_payment_ref'] = payment.external_reference
-                        # Consume reservations immediately and decrement real stock so
-                        # the order reflects reserved inventory even while pending payment.
                         success, error = _consume_reservations(request, cart_items)
                         if not success:
                             raise ValidationError(f'Error al procesar reservas: {error}')
@@ -1073,7 +1031,6 @@ def checkout_view(request):
                                 guest_orders.append(order.id)
                                 request.session['guest_orders'] = guest_orders
                     else:
-                        # Cash: consume reservations immediately and clear the cart
                         success, error = _consume_reservations(request, cart_items)
                         if not success:
                             raise ValidationError(f'Error al procesar reservas: {error}')
@@ -1097,7 +1054,6 @@ def checkout_view(request):
         
         expires_at = request.session.get('_checkout_expires_at')
         payment_total = discounted_total
-        # Build an itemized summary for display (unit, qty, line total)
         cart_summary_items = []
         for ci in cart_items:
             unit_price = getattr(ci.product, 'price', 0) or 0
@@ -1131,7 +1087,6 @@ def checkout_view(request):
             'form': form,
         })
     
-    # Default: redirect to delivery choice step
     return redirect(reverse('web:checkout'))
 
 
@@ -1372,7 +1327,6 @@ def admin_panel(request):
 
 @staff_member_required
 def admin_site_texts(request):
-    # Only allow editing of the configured keys; do not allow creating or deleting
     allowed_keys = [
         'marquee_text',
         'hero_eyebrow',
@@ -1384,7 +1338,6 @@ def admin_site_texts(request):
         'footer_help_envois',
         'footer_help_talles',
     ]
-    # Formset to edit existing SiteText entries (cannot change the key, no delete)
     SiteTextEditFormSet = modelformset_factory(SiteText, fields=('text', 'description'), extra=0, can_delete=False)
 
     class SiteTextCreateForm(forms.ModelForm):
@@ -1392,7 +1345,6 @@ def admin_site_texts(request):
             model = SiteText
             fields = ('key', 'text', 'description')
 
-    # Ensure we only show the allowed keys and keep order
     edit_qs = SiteText.objects.filter(key__in=allowed_keys).order_by('key')
     if request.method == 'POST':
         edit_formset = SiteTextEditFormSet(request.POST, queryset=edit_qs, prefix='edit')
@@ -1402,7 +1354,6 @@ def admin_site_texts(request):
             edit_formset.save()
             messages.success(request, 'Textos del sitio actualizados.')
             return redirect('web:admin_site_texts')
-        # creation is disabled in this view by design
     else:
         edit_formset = SiteTextEditFormSet(queryset=edit_qs, prefix='edit')
         create_form = None
@@ -1481,8 +1432,6 @@ def admin_product_new(request):
     formset = VariantFormSet(request.POST or None)
     selected_category_ids = request.POST.getlist('categories') if request.method == 'POST' else []
 
-    # 1. ESTA ES LA CORRECCIÓN CLAVE: Recuperamos colores y talles bien arriba.
-    # Así, si hay un error, la página recarga pero mantiene todo lo que escribiste.
     if request.method == 'POST':
         color_rows = _build_product_color_rows_from_post(request.POST)
     else:
@@ -1490,11 +1439,8 @@ def admin_product_new(request):
 
     if request.method == 'POST' and form.is_valid():
         promotion_id = request.POST.get('promotion') or None
-
-        # Additional validations
         selected_categories = request.POST.getlist('categories')
         
-        # 2. CORRECCIÓN DEL STOCK 0: Cambiamos > 0 por >= 0
         has_valid_variant = any(
             any((sr.get('size') or '').strip() and int(sr.get('stock') or 0) >= 0 for sr in row.get('size_rows', []))
             for row in color_rows
@@ -1568,7 +1514,6 @@ def admin_product_edit(request, pk):
     formset = VariantFormSet(request.POST or None, instance=product)
     selected_category_ids = request.POST.getlist('categories') if request.method == 'POST' else [str(item) for item in product.categories.values_list('id', flat=True)]
 
-    # 1. Inicializamos color_rows acá también
     if request.method == 'POST':
         color_rows = _build_product_color_rows_from_post(request.POST)
     else:
@@ -1908,35 +1853,8 @@ def password_reset_confirm_view(request, uidb64, token):
         'hide_site_chrome': True,
         'token_is_valid': token_is_valid,
     })
-    
-def admin_drops_list(request):
-    query = request.GET.get('q', '')
-    status_filter = request.GET.get('status', 'all')
-    drops = Drop.objects.all().order_by('-id')
 
-    if query:
-        drops = drops.filter(name__icontains=query)
 
-    # 🌟 FILTRAMOS POR IS_ACTIVE
-    if status_filter == 'active':
-        drops = drops.filter(is_active=True)
-    elif status_filter == 'deleted':
-        drops = drops.filter(is_active=False)
-
-    return render(request, 'admin/drop_list.html', {
-        'drops': drops, 'query': query, 'status': status_filter
-    })
-
-def admin_drop_delete(request, pk):
-    if request.method == 'POST':
-        drop = get_object_or_404(Drop, pk=pk)
-        
-        # 🌟 BORRADO LÓGICO: Solo lo pasamos a falso
-        drop.is_active = False 
-        drop.save()
-        
-        messages.success(request, 'Drop desactivado/eliminado correctamente.')
-    return redirect('web:admin_drops_list')
 def admin_drops_list(request):
     """
     Lista todos los drops en el panel.
@@ -1945,14 +1863,11 @@ def admin_drops_list(request):
     query = request.GET.get('q', '')
     status_filter = request.GET.get('status', 'all')
     
-    # Traemos todos los registros ordenados por el más reciente
     drops = Drop.objects.all().order_by('-id')
 
-    # Filtro de búsqueda por nombre
     if query:
         drops = drops.filter(name__icontains=query)
 
-    # Filtro de estado basado en el campo is_active
     if status_filter == 'active':
         drops = drops.filter(is_active=True)
     elif status_filter == 'deleted':

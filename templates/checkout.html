@@ -2,13 +2,11 @@
 {% block title %}BY Josephine | Checkout{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   /* Fix: allow select dropdowns in the checkout grid to overflow their container */
   .checkout-grid { overflow: visible; }
   .checkout-field { overflow: visible; position: relative; }
-  /* Ensure suggestion popup sits above other content */
-  #geocode-suggestions { position: absolute; z-index: 1200; left: 0; right: 0; }
+  
   /* Keep province/city selects fixed width and truncate selected text */
   .checkout-grid--location { display:flex; gap:18px; align-items:flex-start; }
   .checkout-grid--location .checkout-field { flex: 0 0 48%; min-width: 180px; }
@@ -17,6 +15,7 @@
     .checkout-grid--location { display:block; }
     .checkout-grid--location .checkout-field { width:100%; flex: 1 1 100%; }
   }
+  
   /* Confirmation modal styles */
   .confirm-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:1400; }
   .confirm-modal { width:720px; max-width:96%; background:#fff; border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,0.12); overflow:hidden; }
@@ -90,7 +89,7 @@
           <div class="checkout-panel-intro">
             <span class="checkout-kicker">Paso 1</span>
             <h2>Continuá con envío a domicilio</h2>
-            <p>Solo trabajamos con envío. Te llevamos el pedido al punto que marques en el mapa.</p>
+            <p>Solo trabajamos con envío. Lo enviaremos a la dirección que nos indiques.</p>
           </div>
           <a href="{% url 'web:checkout' %}?step=form&method=shipping" class="btn btn-primary">Ir al formulario de envío</a>
         </section>
@@ -98,8 +97,6 @@
         {% elif step == 'form' %}
         <form class="checkout-form checkout-card" method="post" id="checkout-form">
           {% csrf_token %}
-          <input type="hidden" name="latitude" id="id_latitude" value="">
-          <input type="hidden" name="longitude" id="id_longitude" value="">
           <input type="hidden" name="delivery_method" id="id_delivery_method" value="{{ delivery_method }}">
 
           <div class="checkout-form__topbar">
@@ -142,7 +139,7 @@
             <div class="checkout-panel-intro checkout-panel-intro--tight">
               <span class="checkout-kicker">Paso 2.2</span>
               <h2 id="delivery-section-title">Dirección de envío</h2>
-              <p>Marcá cualquier punto del mapa y completá la dirección para coordinar la entrega.</p>
+              <p>Seleccioná tu provincia y ciudad, y escribí tu calle y número.</p>
             </div>
 
             <div class="checkout-note-banner">
@@ -166,27 +163,10 @@
 
             <div id="shipping-section" class="checkout-grid checkout-grid--delivery">
               <label class="checkout-field checkout-field--full">
-                <span class="form-label">Dirección completa</span>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  {{ form.address }}
-                  <button type="button" id="btn-geocode" class="btn btn-outline">Buscar dirección</button>
-                </div>
-                <div id="geocode-suggestions" style="margin-top:8px;display:none;">
-                  <ul id="geocode-list" style="list-style:none;padding:0;margin:0;background:#fff;border:1px solid #eee;max-height:220px;overflow:auto;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.06);"></ul>
-                </div>
+                <span class="form-label">Dirección (Calle y número, piso, depto)</span>
+                {{ form.address }}
                 {% if form.address.errors %}<span class="form-error">{{ form.address.errors.0 }}</span>{% endif %}
               </label>
-
-              <div class="checkout-map-box checkout-field--full" id="map-box">
-                <div class="checkout-map-head">
-                  <div>
-                    <strong>Mapa de entrega</strong>
-                    <span>Hacé click en cualquier lugar del mapa para marcar tu punto</span>
-                  </div>
-                  <div class="checkout-map-status" id="map-status">Esperando ubicación...</div>
-                </div>
-                <div id="shipping-map" class="checkout-map"></div>
-              </div>
             </div>
           </section>
 
@@ -231,6 +211,7 @@
         {% endif %}
       </div>
     </section>
+    
     <aside class="checkout-sidebar">
       <div class="checkout-summary-card checkout-card">
         <div class="checkout-panel-intro checkout-panel-intro--tight">
@@ -286,7 +267,6 @@
   </div>
 </div>
 
-<!-- Confirmation modal markup -->
 <div id="confirm-modal-backdrop" class="confirm-modal-backdrop" role="dialog" aria-hidden="true">
   <div class="confirm-modal" role="document" aria-modal="true">
     <div style="padding:16px;border-bottom:1px solid #f1f1f1;">
@@ -349,24 +329,18 @@
     </div>
   </div>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
 (() => {
   const expiresAtStr = '{{ expires_at }}';
   const citiesApiUrl = '/api/shipping/zones/cities/';
   const initialCity = '{{ form.city.value|default_if_none:""|escapejs }}';
-  const mapEl = document.getElementById('shipping-map');
-  const mapBox = document.getElementById('map-box');
-  const mapStatus = document.getElementById('map-status');
+  
   const provinceSelect = document.getElementById('id_province');
   const cityInput = document.getElementById('id_city');
-  const addressInput = document.getElementById('id_address');
-  const latInput = document.getElementById('id_latitude');
-  const lonInput = document.getElementById('id_longitude');
   const promoCodeInput = document.querySelector('[name="promo_code"]');
   const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
   
-  // Variables de totales modificadas para soportar el descuento inicial
   const subtotalValue = parseFloat('{{ total|default:0 }}'.replace(',', '.')) || 0;
   const initialDiscount = parseFloat('{{ discount_amount|default:0 }}'.replace(',', '.')) || 0;
   const initialTotal = parseFloat('{{ discounted_total|default:payment_total|default:total|default:0 }}'.replace(',', '.')) || subtotalValue;
@@ -378,45 +352,28 @@
   const modalDiscountValue = document.getElementById('modal-discount-value');
   const modalTotalValue = document.getElementById('modal-total-value');
 
-  let map = null;
-  let marker = null;
   let timerInterval = null;
-  let citySuggestTimer = null;
   let currentCities = [];
   let pendingCity = initialCity;
   const cityCache = new Map();
   const allCitiesCacheUrl = '/api/shipping/zones/cities_all/';
 
-  // Attempt to prefetch all provinces' cities on page load for snappier UX.
+  // Carga previa de ciudades para mayor velocidad
   (async function prefetchAllCities() {
     try {
       const resp = await fetch(allCitiesCacheUrl, { headers: { 'Accept': 'application/json' } });
       if (!resp.ok) return;
       const payload = await resp.json().catch(() => ({}));
       const provinces = payload.provinces || {};
-      // provinces keyed by label; populate cityCache by province key
       Object.values(provinces).forEach((entry) => {
         if (entry && entry.key) {
           cityCache.set(entry.key, entry.cities || []);
         }
       });
-      if (mapStatus) {
-        mapStatus.setAttribute('data-tone', 'success');
-        mapStatus.textContent = 'Ciudades precargadas.';
-      }
     } catch (err) {
-      // silently ignore; will fetch per-province on demand
       console.warn('Prefetch de ciudades falló:', err);
     }
   })();
-  const selectionMarkerStyle = {
-    radius: 9,
-    color: '#ffffff',
-    weight: 3,
-    opacity: 1,
-    fillColor: '#d96a8c',
-    fillOpacity: 1,
-  };
 
   // ===== TIMER =====
   function updateTimer() {
@@ -440,7 +397,6 @@
     
     document.getElementById('timer-display').textContent = display;
     
-    // Progress bar (100% to 0%)
     const percentRemaining = (diff / (15 * 60000)) * 100;
     document.getElementById('timer-fill').style.width = Math.max(0, percentRemaining) + '%';
   }
@@ -472,7 +428,6 @@
   async function previewPromoDiscount() {
     const promoCode = (promoCodeInput?.value || '').trim();
     
-    // Corrección: Si no hay código ingresado, mantenemos los valores iniciales.
     if (!promoCode) {
       setDiscountPreview(initialDiscount, initialTotal);
       return { discountAmount: initialDiscount, totalAfterDiscount: initialTotal };
@@ -492,7 +447,6 @@
       return { discountAmount, totalAfterDiscount };
     } catch (error) {
       console.warn('No se pudo previsualizar el descuento.', error);
-      // En caso de error validando el código nuevo, revertimos al descuento inicial
       setDiscountPreview(initialDiscount, initialTotal);
       return { discountAmount: initialDiscount, totalAfterDiscount: initialTotal };
     }
@@ -515,8 +469,6 @@
       const option = document.createElement('option');
       option.value = item.name;
       option.textContent = item.name;
-      option.dataset.lat = String(item.lat);
-      option.dataset.lng = String(item.lng);
       cityInput.appendChild(option);
     });
 
@@ -535,28 +487,10 @@
   }
 
   function setLoadingCities(isLoading) {
-    if (!mapStatus) return;
     if (isLoading) {
-      mapStatus.removeAttribute('data-tone');
-      mapStatus.innerHTML = '<span class="spinner-inline" aria-hidden="true"></span> Cargando ciudades...';
       if (cityInput) cityInput.disabled = true;
     } else {
-      if (!mapStatus.getAttribute('data-tone')) {
-        mapStatus.textContent = 'Seleccioná una ciudad.';
-      }
       if (cityInput && cityInput.options.length > 1) cityInput.disabled = false;
-    }
-  }
-
-  function centerMapOnProvince() {
-    if (!map || !provinceSelect) return;
-    const selectedCity = currentCities.find((city) => city.name === cityInput?.value) || currentCities[0];
-    if (selectedCity) {
-      map.setView([selectedCity.lat, selectedCity.lng], 10, { animate: true });
-      if (mapStatus) {
-        mapStatus.setAttribute('data-tone', 'success');
-        mapStatus.textContent = 'Provincia seleccionada. Elegí la ciudad para acercar el mapa.';
-      }
     }
   }
 
@@ -571,9 +505,6 @@
     if (cityCache.has(provinceSelect.value)) {
       currentCities = cityCache.get(provinceSelect.value) || [];
       setCityOptions(currentCities);
-      if (currentCities.length) {
-        centerMapOnProvince();
-      }
       return;
     }
 
@@ -590,160 +521,16 @@
       currentCities = Array.isArray(payload.cities) ? payload.cities : [];
       cityCache.set(provinceSelect.value, currentCities);
       setCityOptions(currentCities);
-
-      if (currentCities.length) {
-        centerMapOnProvince();
-      } else if (mapStatus) {
-        mapStatus.setAttribute('data-tone', 'error');
-        mapStatus.textContent = 'No pudimos cargar ciudades para esa provincia.';
-      }
     } catch (error) {
       currentCities = [];
       cityCache.set(provinceSelect.value, currentCities);
       setCityOptions([]);
-      if (mapStatus) {
-        mapStatus.setAttribute('data-tone', 'error');
-        mapStatus.textContent = 'No pudimos cargar ciudades para esa provincia.';
-      }
     } finally {
-      if (mapStatus && mapStatus.textContent === 'Cargando ciudades...') {
-        mapStatus.textContent = 'Seleccioná una ciudad.';
-      }
+      setLoadingCities(false);
     }
   }
 
-  function centerMapOnLocation(query) {
-    const selectedName = (query || '').trim().toLowerCase();
-    if (!map || !selectedName) return;
-
-    const selectedCity = currentCities.find((city) => city.name.toLowerCase() === selectedName)
-      || currentCities.find((city) => city.name.toLowerCase().includes(selectedName));
-
-    if (selectedCity) {
-      map.setView([selectedCity.lat, selectedCity.lng], 12, { animate: true });
-      if (mapStatus) {
-        mapStatus.setAttribute('data-tone', 'success');
-        mapStatus.textContent = 'Ciudad centrada en el mapa. Ahora marcá el punto exacto.';
-      }
-    }
-  }
-
-  function clearShippingSelection(message) {
-    if (marker && map) {
-      map.removeLayer(marker);
-    }
-    marker = null;
-    if (latInput) latInput.value = '';
-    if (lonInput) lonInput.value = '';
-    if (mapStatus) {
-      mapStatus.setAttribute('data-tone', 'error');
-      mapStatus.textContent = message;
-    }
-  }
-
-  async function handleShippingPointSelection(latlng) {
-    if (mapStatus) {
-      mapStatus.setAttribute('data-tone', 'success');
-      mapStatus.textContent = 'Punto guardado. El envío se coordina con el vendedor.';
-    }
-    setSelectedShippingPoint(latlng);
-    map.setView(latlng, Math.max(map.getZoom(), 15), { animate: true });
-    fillAddressFromPoint(latlng);
-  }
-
-  async function fillAddressFromPoint(latlng) {
-    if (!addressInput) return;
-
-    try {
-      const url = new URL('https://nominatim.openstreetmap.org/reverse');
-      url.search = new URLSearchParams({
-        format: 'jsonv2',
-        lat: String(latlng.lat),
-        lon: String(latlng.lng),
-        zoom: '18',
-        addressdetails: '1',
-        'accept-language': 'es',
-      }).toString();
-
-      const response = await fetch(url.toString(), {
-        headers: { 'Accept': 'application/json' },
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      const address = payload.address || {};
-      const road = (address.road || address.pedestrian || address.residential || '').trim();
-      const number = (address.house_number || '').trim();
-      const suburb = (address.suburb || address.neighbourhood || address.city_district || '').trim();
-      const city = (address.city || address.town || address.village || '').trim();
-
-      const parts = [];
-      if (road) {
-        parts.push(number ? `${road} ${number}` : road);
-      } else if (payload.display_name) {
-        parts.push(payload.display_name.split(',').slice(0, 2).join(',').trim());
-      }
-      if (suburb) parts.push(suburb);
-      if (city && city.toLowerCase() !== suburb.toLowerCase()) parts.push(city);
-
-      if (parts.length) {
-        addressInput.value = parts.join(', ');
-        addressInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    } catch (error) {
-      console.warn('No se pudo completar la dirección automáticamente.', error);
-    }
-  }
-
-  function setSelectedShippingPoint(latlng) {
-    if (marker && map) {
-      map.removeLayer(marker);
-    }
-    if (map) {
-      map.closePopup();
-    }
-    marker = L.circleMarker(latlng, selectionMarkerStyle).addTo(map);
-    marker.bringToFront();
-    latInput.value = latlng.lat.toFixed(6);
-    lonInput.value = latlng.lng.toFixed(6);
-    if (mapStatus) {
-      mapStatus.setAttribute('data-tone', 'success');
-      mapStatus.textContent = 'Punto guardado. El envío se coordina con el vendedor.';
-    }
-  }
-
-  // ===== MAP FUNCTIONS =====
-  function initMap() {
-    if (map || !window.L || !mapEl) return;
-    
-    map = L.map(mapEl, { scrollWheelZoom: false }).setView([-34.921, -57.954], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    centerMapOnProvince();
-
-    // Click to place marker
-    map.on('click', async (e) => {
-      handleShippingPointSelection(e.latlng);
-    });
-
-    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
-  }
-
-  function destroyMap() {
-    if (map) {
-      try { map.remove(); } catch (e) {}
-    }
-    map = null;
-    marker = null;
-  }
-
-  // ===== INITIALIZE =====
-  if (mapBox) {
-    initMap();
-  }
-
+  // ===== INITIALIZE EVENTS =====
   if (provinceSelect) {
     provinceSelect.addEventListener('change', async () => {
       pendingCity = '';
@@ -752,104 +539,20 @@
     });
   }
 
-  if (cityInput) {
-    cityInput.addEventListener('input', () => {
-      window.clearTimeout(citySuggestTimer);
-      citySuggestTimer = window.setTimeout(() => centerMapOnLocation(cityInput.value), 120);
-    });
-
-    cityInput.addEventListener('change', () => {
-      centerMapOnLocation(cityInput.value);
-    });
-  }
-
   if (provinceSelect?.value) {
     loadCitiesForProvince();
   }
-
-  // ===== FORWARD GEOCODING (Buscar dirección) =====
-  const geocodeBtn = document.getElementById('btn-geocode');
-  const geocodeList = document.getElementById('geocode-list');
-  const geocodeWrap = document.getElementById('geocode-suggestions');
-
-  function renderGeocodeResults(results) {
-    if (!geocodeList || !geocodeWrap) return;
-    geocodeList.innerHTML = '';
-    if (!results || !results.length) {
-      geocodeWrap.style.display = 'none';
-      return;
-    }
-    results.forEach((r, idx) => {
-      const li = document.createElement('li');
-      li.style.padding = '10px';
-      li.style.borderBottom = '1px solid #f1f1f1';
-      li.style.cursor = 'pointer';
-      li.textContent = r.display_name;
-      li.dataset.lat = String(r.lat);
-      li.dataset.lon = String(r.lon);
-      li.addEventListener('click', () => {
-        const lat = parseFloat(li.dataset.lat);
-        const lon = parseFloat(li.dataset.lon);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          // set marker and inputs
-          setSelectedShippingPoint({ lat, lng: lon });
-          // fill address input with selected display_name
-          if (addressInput) addressInput.value = r.display_name;
-          geocodeWrap.style.display = 'none';
-        }
-      });
-      geocodeList.appendChild(li);
-    });
-    geocodeWrap.style.display = 'block';
-  }
-
-  async function forwardGeocode() {
-    if (!addressInput) return;
-    const street = addressInput.value || '';
-    const city = (provinceSelect && cityInput && cityInput.value) ? cityInput.value : '';
-    const state = provinceSelect ? provinceSelect.options[provinceSelect.selectedIndex]?.text : '';
-    if (!street && !city) return;
-    if (mapStatus) mapStatus.innerHTML = '<span class="spinner-inline" aria-hidden="true"></span> Buscando...';
-
-    try {
-      const params = new URLSearchParams({ street: street, city: city, state: state, country: 'Argentina', limit: '6' });
-      const resp = await fetch('/api/shipping/zones/geocode/?' + params.toString(), { headers: { 'Accept': 'application/json' } });
-      const payload = await resp.json().catch(() => ({}));
-      const results = Array.isArray(payload.results) ? payload.results : [];
-      renderGeocodeResults(results);
-      if (mapStatus) {
-        mapStatus.removeAttribute('data-tone');
-        mapStatus.textContent = results.length ? 'Seleccioná la coincidencia correcta.' : 'No se encontraron coincidencias.';
-      }
-    } catch (err) {
-      console.warn('Geocoding failed', err);
-      if (mapStatus) mapStatus.setAttribute('data-tone', 'error'); mapStatus.textContent = 'Error buscando dirección.';
-    }
-  }
-
-  if (geocodeBtn) {
-    geocodeBtn.addEventListener('click', forwardGeocode);
-  }
-  // Close suggestions when clicking outside
-  document.addEventListener('click', (ev) => {
-    if (!geocodeWrap) return;
-    const target = ev.target;
-    if (geocodeWrap.contains(target) || (geocodeBtn && geocodeBtn.contains(target))) return;
-    geocodeWrap.style.display = 'none';
-  });
 
   if (expiresAtStr) {
     updateTimer();
     timerInterval = setInterval(updateTimer, 1000);
   }
 
-  // ===== CLEANUP =====
   window.addEventListener('beforeunload', () => {
     if (timerInterval) clearInterval(timerInterval);
-    destroyMap();
   });
 
-  // ===== CONFIRMATION MODAL =====
+  // ===== CONFIRMATION MODAL LOGIC =====
   const confirmBackdrop = document.getElementById('confirm-modal-backdrop');
   const confirmCancel = document.getElementById('confirm-modal-cancel');
   const confirmConfirm = document.getElementById('confirm-modal-confirm');
@@ -876,7 +579,6 @@
 
   if (checkoutForm) {
     checkoutForm.addEventListener('submit', function (e) {
-      // intercept submit and show confirmation modal
       e.preventDefault();
       previewPromoDiscount().then(showConfirmModal);
     });

@@ -31,6 +31,8 @@ class Order(models.Model):
     customer_email = models.EmailField(max_length=255, blank=True, default='')
     phone = models.CharField(max_length=50, blank=True, default='')
     delivery_method = models.CharField(max_length=20, choices=DeliveryMethodChoices.choices, default=DeliveryMethodChoices.SHIPPING)
+    delivery_province = models.CharField(max_length=100, blank=True, default='')
+    delivery_city = models.CharField(max_length=100, blank=True, default='')
     delivery_address = models.CharField(max_length=500, blank=True, default='')
     delivery_latitude = models.FloatField(null=True, blank=True)
     delivery_longitude = models.FloatField(null=True, blank=True)
